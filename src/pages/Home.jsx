@@ -26,7 +26,6 @@ export default function Home() {
           ) : null}
           {loginState === "ok" ? <p className="banner banner-ok">Logged in.</p> : null}
           <div className="kicker">Strongest Battlegrounds · Competitive</div>
-          <h1>{brand.name}</h1>
           <p className="lead">A Discord bot for TSB clans — profiles, boards, lineups, trainers, and an AI coach.</p>
           <div className="hero-actions">
             <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
