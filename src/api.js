@@ -1,3 +1,5 @@
+import { getAuthToken } from "./auth";
+
 const NAME = import.meta.env.VITE_BOT_NAME || "ASA";
 export const API = (
   import.meta.env.VITE_API_URL || "https://nonametsbapi-production.up.railway.app"
@@ -12,9 +14,20 @@ export const brand = {
   gif: "https://developers.oneway.lat/evidencias/asa_3_1.gif",
 };
 
+function authHeaders(extra = {}) {
+  const token = getAuthToken();
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
+
 export async function getJson(path, fallback) {
   try {
-    const res = await fetch(`${API}${path}`, { credentials: "include" });
+    const res = await fetch(`${API}${path}`, {
+      credentials: "include",
+      headers: authHeaders(),
+    });
     if (!res.ok) throw new Error(String(res.status));
     return await res.json();
   } catch {
@@ -25,8 +38,11 @@ export async function getJson(path, fallback) {
 export async function apiFetch(path, options = {}) {
   const res = await fetch(`${API}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options,
+    headers: authHeaders({
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    }),
     body: options.body && typeof options.body !== "string" ? JSON.stringify(options.body) : options.body,
   });
   const data = await res.json().catch(() => ({}));
