@@ -13,7 +13,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!loginState) return;
-    const t = setTimeout(() => setParams({}, { replace: true }), 6000);
+    // Clean URL to bare homepage shortly after showing the banner
+    const t = setTimeout(() => setParams({}, { replace: true }), 2500);
     return () => clearTimeout(t);
   }, [loginState, setParams]);
 
