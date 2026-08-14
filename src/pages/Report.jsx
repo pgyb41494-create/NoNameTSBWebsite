@@ -89,10 +89,10 @@ export default function Report() {
             />
           </label>
           <label>
-            Where did it happen?
+            From where
             <input
               required
-              placeholder="e.g. Clan League | Hub / ranked server / tryout VC"
+              placeholder="From where"
               value={form.where}
               onChange={(e) => field("where", e.target.value)}
             />
