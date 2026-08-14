@@ -5,27 +5,21 @@ import { api, brand } from "../api";
 export default function Home() {
   const [stats, setStats] = useState({ players: 0, servers: 0, wars: 0 });
   const [params, setParams] = useSearchParams();
-  const loginState = params.get("login");
 
   useEffect(() => {
     api.stats().then(setStats);
   }, []);
 
   useEffect(() => {
-    if (!loginState) return;
-    // Clean URL to bare homepage shortly after showing the banner
-    const t = setTimeout(() => setParams({}, { replace: true }), 2500);
-    return () => clearTimeout(t);
-  }, [loginState, setParams]);
+    // Strip OAuth leftovers quietly (no popup banners)
+    if (![...params.keys()].length) return;
+    setParams({}, { replace: true });
+  }, [params, setParams]);
 
   return (
     <div>
       <section className="hero">
         <div className="wrap">
-          {loginState === "error" ? (
-            <p className="banner banner-danger">Login failed. Try again.</p>
-          ) : null}
-          {loginState === "ok" ? <p className="banner banner-ok">Logged in.</p> : null}
           <div className="kicker">Strongest Battlegrounds · Competitive</div>
           <p className="lead">A Discord bot for TSB clans — profiles, boards, lineups, trainers, and an AI coach.</p>
           <div className="hero-actions">

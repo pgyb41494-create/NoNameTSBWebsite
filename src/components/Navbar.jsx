@@ -10,9 +10,11 @@ export function Navbar() {
       <div className="nav-inner">
         <div className="nav-edge nav-edge-left" aria-hidden="true" />
         <nav className="nav-links">
+          <NavLink to="/" end>
+            Home
+          </NavLink>
           <NavLink to="/blacklist">Blacklisted</NavLink>
           <NavLink to="/trainers">Trainers</NavLink>
-          <NavLink to="/wars">Wars</NavLink>
         </nav>
         <div className="nav-edge nav-edge-right nav-actions">
           <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">

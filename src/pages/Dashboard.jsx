@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [tab, setTab] = useState("reports");
   const [guilds, setGuilds] = useState([]);
   const [guildId, setGuildId] = useState("network");
+  const [messageGuildId, setMessageGuildId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [blacklist, setBlacklist] = useState([]);
@@ -42,16 +43,32 @@ export default function Dashboard() {
   async function refreshLists(id = guildId) {
     if (!id) return;
     const isNetwork = id === "network";
-    const [bl, tr, ch, rp] = await Promise.all([
+    const [bl, tr, rp] = await Promise.all([
       api.staff.blacklist(id),
       api.staff.trainers(id),
-      isNetwork ? Promise.resolve({ channels: [] }) : api.staff.channels(id).catch(() => ({ channels: [] })),
       api.staff.reports().catch(() => ({ reports: [] })),
     ]);
     setBlacklist(bl.entries || []);
     setTrainers(tr.trainers || []);
-    setChannels(ch.channels || []);
     setReports(rp.reports || []);
+    if (!isNetwork && !messageGuildId) {
+      setMessageGuildId(id);
+    }
+  }
+
+  async function loadChannelsFor(serverId) {
+    if (!serverId || serverId === "network") {
+      setChannels([]);
+      return;
+    }
+    try {
+      const data = await api.staff.channels(serverId);
+      setChannels(data.channels || []);
+      setError("");
+    } catch (err) {
+      setChannels([]);
+      setError(err.message);
+    }
   }
 
   useEffect(() => {
@@ -59,8 +76,11 @@ export default function Dashboard() {
     api.staff
       .guilds()
       .then((data) => {
-        setGuilds(data.guilds || []);
-        setGuildId((current) => current || "network");
+        const list = data.guilds || [];
+        setGuilds(list);
+        if (list[0]?.id) {
+          setMessageGuildId((current) => current || list[0].id);
+        }
         setError("");
       })
       .catch((err) => setError(err.message));
@@ -71,6 +91,13 @@ export default function Dashboard() {
     refreshLists(guildId).catch((err) => setError(err.message));
   }, [guildId, user]);
 
+  useEffect(() => {
+    if (!user?.staff) return;
+    if (tab !== "messages") return;
+    if (form.mode !== "channel" && form.mode !== "dm") return;
+    loadChannelsFor(messageGuildId);
+  }, [messageGuildId, tab, form.mode, user]);
+
   if (loading) return <section className="wrap page">Loading…</section>;
   if (!user) return <Navigate to="/" replace />;
   if (!user.staff) return <Navigate to="/" replace />;
@@ -80,10 +107,15 @@ export default function Dashboard() {
   }
 
   async function searchMembers() {
-    if (!guildId) return;
+    const serverId = messageGuildId || (guildId !== "network" ? guildId : "");
+    if (!serverId) {
+      setError("Pick a server first.");
+      return;
+    }
     try {
-      const data = await api.staff.members(guildId, form.memberQuery);
+      const data = await api.staff.members(serverId, form.memberQuery);
       setMembers(data.members || []);
+      setError("");
     } catch (err) {
       setError(err.message);
     }
@@ -104,6 +136,7 @@ export default function Dashboard() {
       field("reason", "");
       field("evidence", "");
       setNotice("Added to blacklist.");
+      setError("");
     } catch (err) {
       setError(err.message);
     }
@@ -124,6 +157,7 @@ export default function Dashboard() {
       field("price", "");
       field("bio", "");
       setNotice("Trainer saved.");
+      setError("");
     } catch (err) {
       setError(err.message);
     }
@@ -132,15 +166,17 @@ export default function Dashboard() {
   async function sendMessage(e) {
     e.preventDefault();
     try {
+      const serverId = messageGuildId || (guildId !== "network" ? guildId : "");
       await api.staff.message({
         type: form.mode,
-        guildId,
+        guildId: serverId,
         channelId: form.channelId,
         userId: form.userId,
         content: form.content,
       });
       field("content", "");
       setNotice(form.mode === "dm" ? "DM sent." : "Server message sent.");
+      setError("");
     } catch (err) {
       setError(err.message);
     }
@@ -151,7 +187,6 @@ export default function Dashboard() {
       <div className="wrap dash">
         <aside className="dash-side">
           <h2>Dashboard</h2>
-          <p className="sub">Staff only · {user.username}</p>
           <label className="dash-label">Scope</label>
           <select value={guildId} onChange={(e) => setGuildId(e.target.value)}>
             <option value="network">Network (all servers)</option>
@@ -303,7 +338,7 @@ export default function Dashboard() {
           {tab === "messages" ? (
             <>
               <h1>Messages</h1>
-              <p className="sub">Send as the bot in a server channel, or DM a user.</p>
+              <p className="sub">Pick a server, then a channel — no IDs needed.</p>
               <div className="tabs">
                 <button className={`tab ${form.mode === "channel" ? "on" : ""}`} type="button" onClick={() => field("mode", "channel")}>
                   Server channel
@@ -313,20 +348,42 @@ export default function Dashboard() {
                 </button>
               </div>
               <form className="dash-form dash-form-col" onSubmit={sendMessage}>
+                <label className="dash-label">Server</label>
+                <select
+                  value={messageGuildId}
+                  onChange={(e) => {
+                    setMessageGuildId(e.target.value);
+                    field("channelId", "");
+                    field("userId", "");
+                    setMembers([]);
+                  }}
+                  required={form.mode === "channel"}
+                >
+                  <option value="">Select a server</option>
+                  {guilds.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+
                 {form.mode === "channel" ? (
-                  <select value={form.channelId} onChange={(e) => field("channelId", e.target.value)} required>
-                    <option value="">Select a channel</option>
-                    {channels.map((ch) => (
-                      <option key={ch.id} value={ch.id}>
-                        #{ch.name}
-                      </option>
-                    ))}
-                  </select>
+                  <>
+                    <label className="dash-label">Channel</label>
+                    <select value={form.channelId} onChange={(e) => field("channelId", e.target.value)} required>
+                      <option value="">{channels.length ? "Select a channel" : "No text channels found"}</option>
+                      {channels.map((ch) => (
+                        <option key={ch.id} value={ch.id}>
+                          #{ch.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
                 ) : (
                   <>
                     <div className="dash-form">
                       <input
-                        placeholder="Search members"
+                        placeholder="Search members in that server"
                         value={form.memberQuery}
                         onChange={(e) => field("memberQuery", e.target.value)}
                       />
@@ -342,7 +399,6 @@ export default function Dashboard() {
                         </option>
                       ))}
                     </select>
-                    <input placeholder="Or paste a Discord user ID" value={form.userId} onChange={(e) => field("userId", e.target.value)} />
                   </>
                 )}
                 <textarea
