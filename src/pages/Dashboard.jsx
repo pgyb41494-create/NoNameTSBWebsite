@@ -15,7 +15,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [tab, setTab] = useState("reports");
   const [guilds, setGuilds] = useState([]);
-  const [guildId, setGuildId] = useState("");
+  const [guildId, setGuildId] = useState("network");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [blacklist, setBlacklist] = useState([]);
@@ -41,10 +41,11 @@ export default function Dashboard() {
 
   async function refreshLists(id = guildId) {
     if (!id) return;
+    const isNetwork = id === "network";
     const [bl, tr, ch, rp] = await Promise.all([
       api.staff.blacklist(id),
       api.staff.trainers(id),
-      api.staff.channels(id).catch(() => ({ channels: [] })),
+      isNetwork ? Promise.resolve({ channels: [] }) : api.staff.channels(id).catch(() => ({ channels: [] })),
       api.staff.reports().catch(() => ({ reports: [] })),
     ]);
     setBlacklist(bl.entries || []);
@@ -59,7 +60,7 @@ export default function Dashboard() {
       .guilds()
       .then((data) => {
         setGuilds(data.guilds || []);
-        setGuildId((current) => current || data.guilds?.[0]?.id || "");
+        setGuildId((current) => current || "network");
         setError("");
       })
       .catch((err) => setError(err.message));
@@ -151,9 +152,9 @@ export default function Dashboard() {
         <aside className="dash-side">
           <h2>Dashboard</h2>
           <p className="sub">Staff only · {user.username}</p>
-          <label className="dash-label">Server</label>
+          <label className="dash-label">Scope</label>
           <select value={guildId} onChange={(e) => setGuildId(e.target.value)}>
-            {!guilds.length ? <option value="">No servers yet</option> : null}
+            <option value="network">Network (all servers)</option>
             {guilds.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name}
