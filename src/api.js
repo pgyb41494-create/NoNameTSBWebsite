@@ -1,6 +1,6 @@
 import { getAuthToken } from "./auth";
 
-const NAME = import.meta.env.VITE_BOT_NAME || "ASA";
+const NAME = import.meta.env.VITE_BOT_NAME || "Ascendant";
 export const API = (
   import.meta.env.VITE_API_URL || "https://nonametsbapi-production.up.railway.app"
 ).replace(/\/$/, "");

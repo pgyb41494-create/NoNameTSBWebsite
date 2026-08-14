@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { API } from "./api";
 
-const TOKEN_KEY = "asa_auth_token";
+const TOKEN_KEY = "ascendant_auth_token";
 
 const AuthContext = createContext({
   user: null,

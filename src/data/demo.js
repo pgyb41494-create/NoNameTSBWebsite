@@ -1,6 +1,6 @@
 export const DEMO = {
   demo: true,
-  brand: { name: "ASA", gif: "https://developers.oneway.lat/evidencias/asa_3_1.gif" },
+  brand: { name: "Ascendant", gif: "https://developers.oneway.lat/evidencias/asa_3_1.gif" },
   leaderboard: { setupCompleted: false, cards: [] },
   lineup: { regions: [] },
   blacklist: [
