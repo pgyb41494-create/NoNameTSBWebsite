@@ -1,0 +1,77 @@
+export const DEMO = {
+  demo: true,
+  brand: { name: "ASA", gif: "https://developers.oneway.lat/evidencias/asa_3_1.gif" },
+  leaderboard: {
+    setupCompleted: true,
+    cards: [
+      {
+        position: 3,
+        id: 355,
+        name: "Ainhoa",
+        discordTag: "@ainhoa",
+        robloxTag: ".ainhoa.",
+        region: "NA East",
+        stage: "1 High Weak",
+        status: "Challengeable",
+        wins: 4,
+        losses: 2,
+        avatarUrl: "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-C3C0C3C0C3C0-Png/150/150/AvatarHeadshot/Png/noFilter",
+      },
+      {
+        position: 5,
+        id: 252,
+        name: "KuroNoodles",
+        discordTag: "@ainhoa",
+        robloxTag: ".KuroNoodles.",
+        region: "NA West",
+        stage: "0 Low Weak",
+        status: "Challengeable",
+        wins: 2,
+        losses: 1,
+        avatarUrl: null,
+      },
+      {
+        position: 6,
+        id: 188,
+        name: "vex",
+        discordTag: "@vex",
+        robloxTag: ".vex.",
+        region: "NAE",
+        stage: "0 High Weak",
+        status: "Being Challenged",
+        wins: 1,
+        losses: 3,
+        avatarUrl: null,
+      },
+    ],
+  },
+  lineup: {
+    regions: [
+      {
+        key: "na",
+        label: "NA",
+        main: [
+          {
+            position: 1,
+            id: 101,
+            name: "Host",
+            discordTag: "@host",
+            robloxTag: ".Host.",
+            region: "NA West",
+            stage: "2 Low Strong",
+            status: "Challengeable",
+            wins: 12,
+            losses: 3,
+          },
+        ],
+      },
+    ],
+  },
+  blacklist: [
+    { discordId: "0", robloxUsername: "example", reason: "Throwing ranked / wintrading", at: new Date().toISOString() },
+  ],
+  trainers: [
+    { discordId: "1", role: "Head trainer", specialty: "Garou / movement", bio: "Vod reviews + ranked sets." },
+  ],
+  wars: [],
+};
