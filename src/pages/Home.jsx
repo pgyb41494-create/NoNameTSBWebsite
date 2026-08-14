@@ -21,8 +21,8 @@ export default function Home() {
     <div>
       <section className="hero">
         <div className="wrap">
-          {loginState === "denied" ? (
-            <p className="banner banner-danger">That Discord account is not allowed to log in.</p>
+          {loginState === "error" ? (
+            <p className="banner banner-danger">Login failed. Try again.</p>
           ) : null}
           {loginState === "ok" ? <p className="banner banner-ok">Logged in.</p> : null}
           <div className="kicker">Strongest Battlegrounds · Competitive</div>

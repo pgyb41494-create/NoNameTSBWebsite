@@ -4,6 +4,7 @@ import { api } from "../api";
 import { useAuth } from "../auth";
 
 const TABS = [
+  { id: "reports", label: "Reports" },
   { id: "blacklist", label: "Blacklisted" },
   { id: "trainers", label: "Trainers" },
   { id: "messages", label: "Messages" },
@@ -12,20 +13,24 @@ const TABS = [
 export default function Dashboard() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [tab, setTab] = useState("blacklist");
+  const [tab, setTab] = useState("reports");
   const [guilds, setGuilds] = useState([]);
   const [guildId, setGuildId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [blacklist, setBlacklist] = useState([]);
   const [trainers, setTrainers] = useState([]);
+  const [reports, setReports] = useState([]);
   const [channels, setChannels] = useState([]);
   const [members, setMembers] = useState([]);
   const [form, setForm] = useState({
     discordId: "",
     reason: "",
-    specialty: "",
-    role: "Trainer",
+    evidence: "",
+    where: "Clan League | Hub",
+    when: "",
+    stage: "",
+    price: "",
     bio: "",
     channelId: "",
     userId: "",
@@ -34,8 +39,22 @@ export default function Dashboard() {
     memberQuery: "",
   });
 
+  async function refreshLists(id = guildId) {
+    if (!id) return;
+    const [bl, tr, ch, rp] = await Promise.all([
+      api.staff.blacklist(id),
+      api.staff.trainers(id),
+      api.staff.channels(id).catch(() => ({ channels: [] })),
+      api.staff.reports().catch(() => ({ reports: [] })),
+    ]);
+    setBlacklist(bl.entries || []);
+    setTrainers(tr.trainers || []);
+    setChannels(ch.channels || []);
+    setReports(rp.reports || []);
+  }
+
   useEffect(() => {
-    if (!user) return;
+    if (!user?.staff) return;
     api.staff
       .guilds()
       .then((data) => {
@@ -47,22 +66,13 @@ export default function Dashboard() {
   }, [user]);
 
   useEffect(() => {
-    if (!guildId) return;
-    Promise.all([
-      api.staff.blacklist(guildId),
-      api.staff.trainers(guildId),
-      api.staff.channels(guildId).catch(() => ({ channels: [] })),
-    ])
-      .then(([bl, tr, ch]) => {
-        setBlacklist(bl.entries || []);
-        setTrainers(tr.trainers || []);
-        setChannels(ch.channels || []);
-      })
-      .catch((err) => setError(err.message));
-  }, [guildId]);
+    if (!guildId || !user?.staff) return;
+    refreshLists(guildId).catch((err) => setError(err.message));
+  }, [guildId, user]);
 
   if (loading) return <section className="wrap page">Loading…</section>;
   if (!user) return <Navigate to="/" replace />;
+  if (!user.staff) return <Navigate to="/" replace />;
 
   function field(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -84,10 +94,14 @@ export default function Dashboard() {
       const data = await api.staff.addBlacklist(guildId, {
         discordId: form.discordId,
         reason: form.reason,
+        evidence: form.evidence,
+        where: form.where,
+        when: form.when,
       });
       setBlacklist(data.entries || []);
       field("discordId", "");
       field("reason", "");
+      field("evidence", "");
       setNotice("Added to blacklist.");
     } catch (err) {
       setError(err.message);
@@ -99,13 +113,14 @@ export default function Dashboard() {
     try {
       const data = await api.staff.addTrainer(guildId, {
         discordId: form.discordId,
-        specialty: form.specialty,
-        role: form.role,
+        stage: form.stage,
+        price: form.price,
         bio: form.bio,
       });
       setTrainers(data.trainers || []);
       field("discordId", "");
-      field("specialty", "");
+      field("stage", "");
+      field("price", "");
       field("bio", "");
       setNotice("Trainer saved.");
     } catch (err) {
@@ -161,19 +176,74 @@ export default function Dashboard() {
           {error ? <p className="banner banner-danger">{error}</p> : null}
           {notice ? <p className="banner banner-ok">{notice}</p> : null}
 
+          {tab === "reports" ? (
+            <>
+              <h1>Pending reports</h1>
+              <p className="sub">Approve to push a report onto the public blacklist.</p>
+              <div className="stack">
+                {reports.length === 0 ? <p className="sub">No pending reports.</p> : null}
+                {reports.map((row) => (
+                  <article className="list-card" key={row.id}>
+                    <h3>
+                      {row.reportedName || row.reportedId} · reported by {row.reporterName || row.reporterId}
+                    </h3>
+                    <p>
+                      <strong>Reason:</strong> {row.reason}
+                    </p>
+                    <p>
+                      <strong>Proof:</strong> {row.proof}
+                    </p>
+                    <p>
+                      <strong>When:</strong> {row.when || "—"} · <strong>Where:</strong> {row.where || "—"}
+                    </p>
+                    <div className="dash-form" style={{ marginTop: 12 }}>
+                      <button
+                        className="btn"
+                        type="button"
+                        onClick={async () => {
+                          await api.staff.approveReport(row.id, { guildId });
+                          setNotice("Report approved and added to blacklist.");
+                          await refreshLists();
+                        }}
+                      >
+                        Approve → blacklist
+                      </button>
+                      <button
+                        className="btn ghost"
+                        type="button"
+                        onClick={async () => {
+                          await api.staff.denyReport(row.id);
+                          setNotice("Report denied.");
+                          await refreshLists();
+                        }}
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : null}
+
           {tab === "blacklist" ? (
             <>
-              <h1 className="gradient-text-red">Blacklisted</h1>
-              <form className="dash-form" onSubmit={addBlacklist}>
+              <h1>Blacklisted</h1>
+              <form className="dash-form dash-form-col" onSubmit={addBlacklist}>
                 <input placeholder="Discord user ID" value={form.discordId} onChange={(e) => field("discordId", e.target.value)} required />
-                <input placeholder="Reason" value={form.reason} onChange={(e) => field("reason", e.target.value)} />
-                <button className="btn" type="submit">Add</button>
+                <input placeholder="Sanction reason" value={form.reason} onChange={(e) => field("reason", e.target.value)} />
+                <input placeholder="Proof / evidence links" value={form.evidence} onChange={(e) => field("evidence", e.target.value)} />
+                <input placeholder="Where (Clan League | Hub)" value={form.where} onChange={(e) => field("where", e.target.value)} />
+                <input placeholder="When it happened" value={form.when} onChange={(e) => field("when", e.target.value)} />
+                <button className="btn" type="submit">
+                  Add
+                </button>
               </form>
               <div className="stack">
                 {blacklist.map((row) => (
                   <article className="list-card dash-row" key={`${row.discordId}-${row.at}`}>
                     <div>
-                      <h3>{row.robloxUsername || row.discordId}</h3>
+                      <h3>{row.displayName || row.username || row.discordId}</h3>
                       <p>{row.reason}</p>
                     </div>
                     <button
@@ -194,22 +264,24 @@ export default function Dashboard() {
 
           {tab === "trainers" ? (
             <>
-              <h1 className="gradient-text-orange">Trainers</h1>
-              <form className="dash-form" onSubmit={addTrainer}>
+              <h1>Trainers</h1>
+              <form className="dash-form dash-form-col" onSubmit={addTrainer}>
                 <input placeholder="Discord user ID" value={form.discordId} onChange={(e) => field("discordId", e.target.value)} required />
-                <input placeholder="Specialty" value={form.specialty} onChange={(e) => field("specialty", e.target.value)} />
-                <input placeholder="Role" value={form.role} onChange={(e) => field("role", e.target.value)} />
-                <input placeholder="Bio" value={form.bio} onChange={(e) => field("bio", e.target.value)} />
-                <button className="btn" type="submit">Save</button>
+                <input placeholder="Stage (e.g. 1 High Weak)" value={form.stage} onChange={(e) => field("stage", e.target.value)} required />
+                <input placeholder="Price to train (e.g. $10 / 1h)" value={form.price} onChange={(e) => field("price", e.target.value)} required />
+                <input placeholder="Bio (optional)" value={form.bio} onChange={(e) => field("bio", e.target.value)} />
+                <button className="btn" type="submit">
+                  Save trainer
+                </button>
               </form>
               <div className="stack">
                 {trainers.map((row) => (
                   <article className="list-card dash-row" key={row.discordId}>
                     <div>
                       <h3>
-                        {row.discordId} · {row.role}
+                        {row.displayName || row.username || row.discordId} · {row.stage}
                       </h3>
-                      <p>{row.specialty}</p>
+                      <p>{row.price}</p>
                     </div>
                     <button
                       className="btn ghost"

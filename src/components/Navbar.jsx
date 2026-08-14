@@ -18,11 +18,18 @@ export function Navbar() {
           <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
             Add bot
           </a>
+          {user ? (
+            <NavLink className="btn ghost" to="/report">
+              Report
+            </NavLink>
+          ) : null}
           {!loading && user ? (
             <>
-              <NavLink className="btn ghost" to="/dashboard">
-                Dashboard
-              </NavLink>
+              {user.staff ? (
+                <NavLink className="btn ghost" to="/dashboard">
+                  Dashboard
+                </NavLink>
+              ) : null}
               <button type="button" className="btn ghost user-chip" onClick={logout}>
                 {user.avatar ? <img src={user.avatar} alt="" /> : null}
                 {user.username}

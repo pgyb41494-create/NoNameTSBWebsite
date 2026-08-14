@@ -7,25 +7,40 @@ export default function Trainers() {
 
   useEffect(() => {
     api.public().then((live) => {
-      if (live && Array.isArray(live.trainers) && live.trainers.length) setRows(live.trainers);
+      if (live && Array.isArray(live.trainers)) setRows(live.trainers);
     });
   }, []);
 
   return (
     <section className="page-hero page-hero-orange">
       <div className="wrap page">
-        <h1 className="gradient-text-orange">Trainers</h1>
-        <p className="sub">People who run vods and ranked sets. `'trainer add @user specialty`</p>
-        <div className="stack">
+        <p className="record-count">{rows.length} trainers listed</p>
+        <div className="card-grid">
+          {rows.length === 0 ? <p className="sub">No trainers yet.</p> : null}
           {rows.map((row) => (
-            <article className="list-card" key={row.discordId}>
-              <h3>
-                {row.profile?.robloxUsername || row.discordId} · {row.role}
-              </h3>
-              <p>
-                {row.specialty}
-                {row.bio ? ` — ${row.bio}` : ""}
-              </p>
+            <article className="sanction-card trainer-card" key={row.discordId}>
+              <div className="sanction-top">
+                <div className="sanction-person">
+                  <span className="sanction-label">Trainer</span>
+                  <div className="sanction-user">
+                    {row.avatar ? <img src={row.avatar} alt="" /> : <div className="avatar-fallback" />}
+                    <div>
+                      <strong>{row.displayName || row.username || row.discordId}</strong>
+                      <div className="handle-line">@{row.username || row.discordId}</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="sanction-person">
+                  <span className="sanction-label">Rate</span>
+                  <p className="price-line">{row.price || "TBD"}</p>
+                </div>
+              </div>
+
+              <div className="sanction-reason">
+                <span className="sanction-label">Stage</span>
+                <p>{row.stage || row.specialty || "Unranked"}</p>
+                {row.bio ? <p className="evidence">{row.bio}</p> : null}
+              </div>
             </article>
           ))}
         </div>

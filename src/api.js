@@ -12,7 +12,7 @@ export const brand = {
 
 export async function getJson(path, fallback) {
   try {
-    const res = await fetch(`${API}${path}`);
+    const res = await fetch(`${API}${path}`, { credentials: "include" });
     if (!res.ok) throw new Error(String(res.status));
     return await res.json();
   } catch {
@@ -20,7 +20,7 @@ export async function getJson(path, fallback) {
   }
 }
 
-export async function staffFetch(path, options = {}) {
+export async function apiFetch(path, options = {}) {
   const res = await fetch(`${API}${path}`, {
     credentials: "include",
     headers: { "Content-Type": "application/json", ...(options.headers || {}) },
@@ -38,17 +38,21 @@ export const api = {
   stats: () => getJson("/api/public/stats", { players: 0, servers: 0, wars: 0, matches: 0 }),
   public: () => getJson("/api/public", null),
   brand: () => getJson("/api/public/brand", { name: NAME, prefix: "'", tagline: "TSB clan ops", gif: brand.gif }),
+  submitReport: (body) => apiFetch("/api/user/reports", { method: "POST", body }),
   staff: {
-    guilds: () => staffFetch("/api/staff/guilds"),
-    overview: (guildId) => staffFetch(`/api/staff/${guildId}/overview`),
-    channels: (guildId) => staffFetch(`/api/staff/${guildId}/channels`),
-    members: (guildId, q = "") => staffFetch(`/api/staff/${guildId}/members?q=${encodeURIComponent(q)}`),
-    blacklist: (guildId) => staffFetch(`/api/staff/${guildId}/blacklist`),
-    addBlacklist: (guildId, body) => staffFetch(`/api/staff/${guildId}/blacklist`, { method: "POST", body }),
-    removeBlacklist: (guildId, userId) => staffFetch(`/api/staff/${guildId}/blacklist/${userId}`, { method: "DELETE" }),
-    trainers: (guildId) => staffFetch(`/api/staff/${guildId}/trainers`),
-    addTrainer: (guildId, body) => staffFetch(`/api/staff/${guildId}/trainers`, { method: "POST", body }),
-    removeTrainer: (guildId, userId) => staffFetch(`/api/staff/${guildId}/trainers/${userId}`, { method: "DELETE" }),
-    message: (body) => staffFetch("/api/staff/message", { method: "POST", body }),
+    guilds: () => apiFetch("/api/staff/guilds"),
+    overview: (guildId) => apiFetch(`/api/staff/${guildId}/overview`),
+    channels: (guildId) => apiFetch(`/api/staff/${guildId}/channels`),
+    members: (guildId, q = "") => apiFetch(`/api/staff/${guildId}/members?q=${encodeURIComponent(q)}`),
+    reports: () => apiFetch("/api/staff/reports"),
+    approveReport: (id, body = {}) => apiFetch(`/api/staff/reports/${id}/approve`, { method: "POST", body }),
+    denyReport: (id) => apiFetch(`/api/staff/reports/${id}/deny`, { method: "POST" }),
+    blacklist: (guildId) => apiFetch(`/api/staff/${guildId}/blacklist`),
+    addBlacklist: (guildId, body) => apiFetch(`/api/staff/${guildId}/blacklist`, { method: "POST", body }),
+    removeBlacklist: (guildId, userId) => apiFetch(`/api/staff/${guildId}/blacklist/${userId}`, { method: "DELETE" }),
+    trainers: (guildId) => apiFetch(`/api/staff/${guildId}/trainers`),
+    addTrainer: (guildId, body) => apiFetch(`/api/staff/${guildId}/trainers`, { method: "POST", body }),
+    removeTrainer: (guildId, userId) => apiFetch(`/api/staff/${guildId}/trainers/${userId}`, { method: "DELETE" }),
+    message: (body) => apiFetch("/api/staff/message", { method: "POST", body }),
   },
 };
