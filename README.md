@@ -1,14 +1,13 @@
-# NoNameTSBWebsite
+# Ascendant website
 
-Set `VITE_API_URL` on Vercel to the Railway API (baked in at build time):
+Set on Vercel:
 
 ```text
 VITE_API_URL=https://nonametsbapi-production.up.railway.app
+VITE_BOT_NAME=Ascendant
 ```
 
-If unset, the site defaults to that production API URL (not localhost).
-
-Discord OAuth redirect (Developer Portal) must be:
+Discord OAuth redirect:
 
 ```text
 https://nonametsbapi-production.up.railway.app/auth/discord/callback
