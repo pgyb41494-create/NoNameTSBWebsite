@@ -1,5 +1,7 @@
 const NAME = import.meta.env.VITE_BOT_NAME || "ASA";
-export const API = (import.meta.env.VITE_API_URL || "http://localhost:8787").replace(/\/$/, "");
+export const API = (
+  import.meta.env.VITE_API_URL || "https://nonametsbapi-production.up.railway.app"
+).replace(/\/$/, "");
 
 export const brand = {
   name: NAME,

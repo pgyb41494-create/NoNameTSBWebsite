@@ -1,17 +1,17 @@
 # NoNameTSBWebsite
 
-Public site for the TSB clan bot — leaderboard, lineup, blacklist, trainers, and wars.
+Set `VITE_API_URL` on Vercel to the Railway API (baked in at build time):
 
-## Setup
-
-```bash
-npm install
-copy .env.example .env
-npm run dev
+```text
+VITE_API_URL=https://nonametsbapi-production.up.railway.app
 ```
 
-Set `VITE_API_URL` to the API (`http://localhost:8787`).
+If unset, the site defaults to that production API URL (not localhost).
 
-Deploy the `NoNameBotWebsite` folder to Vercel.
+Discord OAuth redirect (Developer Portal) must be:
+
+```text
+https://nonametsbapi-production.up.railway.app/auth/discord/callback
+```
 
 Repo: https://github.com/pgyb41494-create/NoNameTSBWebsite
