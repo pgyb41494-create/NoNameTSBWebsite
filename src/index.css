@@ -30,24 +30,46 @@ button { font-family: inherit; cursor: pointer; }
 .wrap { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
 .grow { flex: 1; }
 
-.nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 0;
+.nav-bar {
+  width: 100%;
   border-bottom: 1px solid var(--line);
 }
-.nav-brand { font-weight: 800; letter-spacing: 0.08em; }
-.nav-links { display: flex; gap: 18px; color: var(--muted); font-size: 14px; }
-.nav-links a.active, .nav-links a:hover { color: var(--text); }
-.nav-links a.nav-link-red.active,
-.nav-links a.nav-link-red:hover,
-.nav-links a.nav-link-orange.active,
-.nav-links a.nav-link-orange:hover {
-  color: transparent;
+.nav-inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 28px;
 }
-.nav-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.nav-edge { min-width: 0; }
+.nav-edge-right {
+  justify-self: end;
+}
+.nav-links {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+}
+.nav-links a {
+  color: #fff;
+  opacity: 0.78;
+}
+.nav-links a.active,
+.nav-links a:hover {
+  color: #fff;
+  opacity: 1;
+}
+.nav-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
 .btn {
   border: 0;
   border-radius: 8px;
@@ -70,19 +92,12 @@ button { font-family: inherit; cursor: pointer; }
   border-radius: 50%;
 }
 
-.nav-link-red,
-.gradient-text-red {
-  background: linear-gradient(90deg, #ff3b3b, #ff8a8a);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.nav-link-orange,
+.gradient-text-red,
 .gradient-text-orange {
-  background: linear-gradient(90deg, #ff7a18, #ffd36a);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: #fff;
+  background: none;
+  -webkit-background-clip: unset;
+  background-clip: unset;
 }
 
 .hero {
@@ -279,9 +294,19 @@ button { font-family: inherit; cursor: pointer; }
 }
 
 @media (max-width: 860px) {
-  .nav { flex-wrap: wrap; }
-  .nav-links { width: 100%; order: 3; }
-  .nav-actions { margin-left: auto; }
+  .nav-inner {
+    grid-template-columns: 1fr;
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .nav-edge-left { display: none; }
+  .nav-links { order: 1; }
+  .nav-edge-right,
+  .nav-actions {
+    order: 2;
+    justify-self: stretch;
+    justify-content: flex-end;
+  }
   .dash { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
