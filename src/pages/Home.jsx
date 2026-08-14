@@ -36,14 +36,10 @@ export default function Home() {
               Trainers
             </Link>
           </div>
-          <div className="stats">
+          <div className="stats stats-two">
             <div className="stat">
               <b>{stats.players}</b>
               <span>Players</span>
-            </div>
-            <div className="stat">
-              <b>{stats.wars}</b>
-              <span>Wars</span>
             </div>
             <div className="stat">
               <b>{stats.servers}</b>
@@ -65,10 +61,6 @@ export default function Home() {
           <article className="feature">
             <h3>TSB AI Coach</h3>
             <p>/tsbcoach watches a clip, checks the username/avatar against /profile, then tells you what to improve.</p>
-          </article>
-          <article className="feature">
-            <h3>Public boards</h3>
-            <p>Clan pages for blacklisted players, trainers, and war history.</p>
           </article>
         </div>
       </section>

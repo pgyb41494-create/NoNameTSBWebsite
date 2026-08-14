@@ -24,10 +24,15 @@ export function Navbar() {
           Add bot
         </a>
         {!loading && user ? (
-          <button type="button" className="btn ghost user-chip" onClick={logout}>
-            {user.avatar ? <img src={user.avatar} alt="" /> : null}
-            {user.username}
-          </button>
+          <>
+            <NavLink className="btn ghost" to="/dashboard">
+              Dashboard
+            </NavLink>
+            <button type="button" className="btn ghost user-chip" onClick={logout}>
+              {user.avatar ? <img src={user.avatar} alt="" /> : null}
+              {user.username}
+            </button>
+          </>
         ) : (
           <a className="btn btn-discord" href={loginUrl}>
             Log in with Discord
