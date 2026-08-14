@@ -36,6 +36,13 @@ export default function Dashboard() {
     channelId: "",
     userId: "",
     content: "",
+    format: "text",
+    embedTitle: "",
+    embedDescription: "",
+    embedColor: "2B2D31",
+    embedFooter: "",
+    embedImage: "",
+    embedThumbnail: "",
     mode: "channel",
     memberQuery: "",
   });
@@ -167,14 +174,33 @@ export default function Dashboard() {
     e.preventDefault();
     try {
       const serverId = messageGuildId || (guildId !== "network" ? guildId : "");
+      const isEmbed = form.format === "embed";
       await api.staff.message({
         type: form.mode,
         guildId: serverId,
         channelId: form.channelId,
         userId: form.userId,
         content: form.content,
+        format: form.format,
+        embed: isEmbed
+          ? {
+              title: form.embedTitle,
+              description: form.embedDescription,
+              color: form.embedColor,
+              footer: form.embedFooter,
+              image: form.embedImage,
+              thumbnail: form.embedThumbnail,
+            }
+          : undefined,
       });
       field("content", "");
+      if (isEmbed) {
+        field("embedTitle", "");
+        field("embedDescription", "");
+        field("embedFooter", "");
+        field("embedImage", "");
+        field("embedThumbnail", "");
+      }
       setNotice(form.mode === "dm" ? "DM sent." : "Server message sent.");
       setError("");
     } catch (err) {
@@ -401,13 +427,65 @@ export default function Dashboard() {
                     </select>
                   </>
                 )}
-                <textarea
-                  rows={5}
-                  placeholder="Message from the bot"
-                  value={form.content}
-                  onChange={(e) => field("content", e.target.value)}
-                  required
-                />
+                <div className="tabs">
+                  <button className={`tab ${form.format === "text" ? "on" : ""}`} type="button" onClick={() => field("format", "text")}>
+                    Plain text
+                  </button>
+                  <button className={`tab ${form.format === "embed" ? "on" : ""}`} type="button" onClick={() => field("format", "embed")}>
+                    Embed
+                  </button>
+                </div>
+
+                {form.format === "embed" ? (
+                  <>
+                    <input
+                      placeholder="Embed title"
+                      value={form.embedTitle}
+                      onChange={(e) => field("embedTitle", e.target.value)}
+                    />
+                    <textarea
+                      rows={5}
+                      placeholder="Embed description"
+                      value={form.embedDescription}
+                      onChange={(e) => field("embedDescription", e.target.value)}
+                      required
+                    />
+                    <input
+                      placeholder="Color hex (e.g. 2B2D31)"
+                      value={form.embedColor}
+                      onChange={(e) => field("embedColor", e.target.value)}
+                    />
+                    <input
+                      placeholder="Footer (optional)"
+                      value={form.embedFooter}
+                      onChange={(e) => field("embedFooter", e.target.value)}
+                    />
+                    <input
+                      placeholder="Image URL (optional)"
+                      value={form.embedImage}
+                      onChange={(e) => field("embedImage", e.target.value)}
+                    />
+                    <input
+                      placeholder="Thumbnail URL (optional)"
+                      value={form.embedThumbnail}
+                      onChange={(e) => field("embedThumbnail", e.target.value)}
+                    />
+                    <textarea
+                      rows={2}
+                      placeholder="Optional plain text above the embed"
+                      value={form.content}
+                      onChange={(e) => field("content", e.target.value)}
+                    />
+                  </>
+                ) : (
+                  <textarea
+                    rows={5}
+                    placeholder="Message from the bot"
+                    value={form.content}
+                    onChange={(e) => field("content", e.target.value)}
+                    required
+                  />
+                )}
                 <button className="btn" type="submit">
                   Send
                 </button>
