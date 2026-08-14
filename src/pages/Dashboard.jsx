@@ -28,7 +28,7 @@ export default function Dashboard() {
     discordId: "",
     reason: "",
     evidence: "",
-    where: "Clan League | Hub",
+    where: "",
     when: "",
     stage: "",
     price: "",
@@ -269,7 +269,7 @@ export default function Dashboard() {
                 <input placeholder="Discord user ID" value={form.discordId} onChange={(e) => field("discordId", e.target.value)} required />
                 <input placeholder="Sanction reason" value={form.reason} onChange={(e) => field("reason", e.target.value)} />
                 <input placeholder="Proof / evidence links" value={form.evidence} onChange={(e) => field("evidence", e.target.value)} />
-                <input placeholder="Where (Clan League | Hub)" value={form.where} onChange={(e) => field("where", e.target.value)} />
+                <input placeholder="From where" value={form.where} onChange={(e) => field("where", e.target.value)} />
                 <input placeholder="When it happened" value={form.when} onChange={(e) => field("when", e.target.value)} />
                 <button className="btn" type="submit">
                   Add
