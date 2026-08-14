@@ -1,45 +1,53 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import { DEMO } from "../data/demo";
+import { BoardAvatar, displayNameOf, handleOf } from "../components/BoardAvatar";
 
 export default function Trainers() {
-  const [rows, setRows] = useState(DEMO.trainers);
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let alive = true;
+    setLoading(true);
     api.public().then((live) => {
+      if (!alive) return;
       if (live && Array.isArray(live.trainers)) setRows(live.trainers);
+      else setRows([]);
+      setLoading(false);
     });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   return (
-    <section className="page-hero page-hero-orange">
+    <section className="page-hero page-hero-orange" key="trainers">
       <div className="wrap page">
-        <p className="record-count">{rows.length} trainers listed</p>
-        <div className="card-grid">
-          {rows.length === 0 ? <p className="sub">No trainers yet.</p> : null}
+        <p className="record-count">{loading ? "Loading…" : `${rows.length} trainers listed`}</p>
+        <div className="board-grid">
+          {!loading && rows.length === 0 ? <p className="sub">No trainers yet.</p> : null}
           {rows.map((row) => (
-            <article className="sanction-card trainer-card" key={row.discordId}>
-              <div className="sanction-top">
-                <div className="sanction-person">
-                  <span className="sanction-label">Trainer</span>
-                  <div className="sanction-user">
-                    {row.avatar ? <img src={row.avatar} alt="" /> : <div className="avatar-fallback" />}
-                    <div>
-                      <strong>{row.displayName || row.username || row.discordId}</strong>
-                      <div className="handle-line">@{row.username || row.discordId}</div>
-                    </div>
-                  </div>
+            <article className="board-card" key={row.discordId}>
+              <div className="board-avatars">
+                <div className="board-avatar-col">
+                  <span className="board-label">Trainer</span>
+                  <BoardAvatar src={row.avatar} userId={row.discordId} />
                 </div>
-                <div className="sanction-person">
-                  <span className="sanction-label">Rate</span>
-                  <p className="price-line">{row.price || "TBD"}</p>
+                <div className="board-avatar-col board-avatar-col-text">
+                  <span className="board-label">Rate</span>
+                  <p className="board-rate">{row.price || "TBD"}</p>
                 </div>
               </div>
 
-              <div className="sanction-reason">
-                <span className="sanction-label">Stage</span>
-                <p>{row.stage || row.specialty || "Unranked"}</p>
-                {row.bio ? <p className="evidence">{row.bio}</p> : null}
+              <div className="board-identity">
+                <strong className="board-name">{displayNameOf(row)}</strong>
+                <div className="board-handle">{handleOf(row)}</div>
+              </div>
+
+              <div className="board-section">
+                <span className="board-label">Stage</span>
+                <p className="board-body">{row.stage || row.specialty || "Unranked"}</p>
+                {row.bio ? <p className="board-muted">{row.bio}</p> : null}
               </div>
             </article>
           ))}
