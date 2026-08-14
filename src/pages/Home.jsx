@@ -1,18 +1,30 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api, brand } from "../api";
 
 export default function Home() {
   const [stats, setStats] = useState({ players: 0, servers: 0, wars: 0 });
+  const [params, setParams] = useSearchParams();
+  const loginState = params.get("login");
 
   useEffect(() => {
     api.stats().then(setStats);
   }, []);
 
+  useEffect(() => {
+    if (!loginState) return;
+    const t = setTimeout(() => setParams({}, { replace: true }), 6000);
+    return () => clearTimeout(t);
+  }, [loginState, setParams]);
+
   return (
     <div>
       <section className="hero">
         <div className="wrap">
+          {loginState === "denied" ? (
+            <p className="banner banner-danger">That Discord account is not allowed to log in.</p>
+          ) : null}
+          {loginState === "ok" ? <p className="banner banner-ok">Logged in.</p> : null}
           <div className="kicker">Strongest Battlegrounds · Competitive</div>
           <h1>{brand.name}</h1>
           <p className="lead">A Discord bot for TSB clans — profiles, boards, lineups, trainers, and an AI coach.</p>
@@ -20,8 +32,8 @@ export default function Home() {
             <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
               Add bot
             </a>
-            <Link className="btn ghost" to="/leaderboard">
-              Leaderboard
+            <Link className="btn ghost" to="/trainers">
+              Trainers
             </Link>
           </div>
           <div className="stats">
@@ -52,11 +64,11 @@ export default function Home() {
           </article>
           <article className="feature">
             <h3>TSB AI Coach</h3>
-            <p>/tsbcoach watches a clip, checks the username/avatar against /profile, then tells you what to fix.</p>
+            <p>/tsbcoach watches a clip, checks the username/avatar against /profile, then tells you what to improve.</p>
           </article>
           <article className="feature">
             <h3>Public boards</h3>
-            <p>Leaderboard and lineup cards match the Discord GIF layout — rank, ID, mention, stage, W/L.</p>
+            <p>Clan pages for blacklisted players, trainers, and war history.</p>
           </article>
         </div>
       </section>

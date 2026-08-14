@@ -34,12 +34,20 @@ button { font-family: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   padding: 18px 0;
   border-bottom: 1px solid var(--line);
 }
 .nav-brand { font-weight: 800; letter-spacing: 0.08em; }
 .nav-links { display: flex; gap: 18px; color: var(--muted); font-size: 14px; }
 .nav-links a.active, .nav-links a:hover { color: var(--text); }
+.nav-links a.nav-link-red.active,
+.nav-links a.nav-link-red:hover,
+.nav-links a.nav-link-orange.active,
+.nav-links a.nav-link-orange:hover {
+  color: transparent;
+}
+.nav-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .btn {
   border: 0;
   border-radius: 8px;
@@ -49,6 +57,33 @@ button { font-family: inherit; cursor: pointer; }
   color: #0b0c0e;
 }
 .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+.btn-discord { background: #5865f2; color: #fff; }
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+}
+.user-chip img {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.nav-link-red,
+.gradient-text-red {
+  background: linear-gradient(90deg, #ff3b3b, #ff8a8a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.nav-link-orange,
+.gradient-text-orange {
+  background: linear-gradient(90deg, #ff7a18, #ffd36a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
 
 .hero {
   padding: 88px 0 56px;
@@ -57,6 +92,36 @@ button { font-family: inherit; cursor: pointer; }
     var(--bg);
   text-align: center;
 }
+.page-hero {
+  min-height: 100%;
+}
+.page-hero-red {
+  background:
+    radial-gradient(800px 280px at 50% -40px, rgba(237, 66, 69, 0.28), transparent),
+    var(--bg);
+}
+.page-hero-orange {
+  background:
+    radial-gradient(800px 280px at 50% -40px, rgba(255, 138, 0, 0.26), transparent),
+    var(--bg);
+}
+.page-hero-blue {
+  background:
+    radial-gradient(800px 280px at 50% -40px, rgba(124, 156, 255, 0.16), transparent),
+    var(--bg);
+}
+.page-hero h1 {
+  font-size: clamp(36px, 6vw, 64px);
+}
+.banner {
+  margin: 0 auto 18px;
+  max-width: 460px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.banner-danger { background: rgba(237, 66, 69, 0.18); color: #ffb4b4; }
+.banner-ok { background: rgba(87, 242, 135, 0.12); color: #b6f5c9; }
 .kicker { color: var(--muted); letter-spacing: 0.14em; text-transform: uppercase; font-size: 12px; }
 .hero h1 { font-size: clamp(48px, 8vw, 92px); margin: 12px 0 8px; letter-spacing: 0.04em; }
 .lead { color: var(--muted); font-size: 18px; margin: 0 auto 28px; max-width: 520px; }
@@ -151,6 +216,11 @@ button { font-family: inherit; cursor: pointer; }
   font-size: 13px;
 }
 
+@media (max-width: 860px) {
+  .nav { flex-wrap: wrap; }
+  .nav-links { width: 100%; order: 3; }
+  .nav-actions { margin-left: auto; }
+}
 @media (max-width: 640px) {
   .player-card { grid-template-columns: 1fr; }
   .stats { grid-template-columns: 1fr; }

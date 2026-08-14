@@ -12,21 +12,23 @@ export default function Trainers() {
   }, []);
 
   return (
-    <section className="wrap page">
-      <h1>Trainers</h1>
-      <p className="sub">People who run vods and ranked sets. `'trainer add @user specialty`</p>
-      <div className="stack">
-        {rows.map((row) => (
-          <article className="list-card" key={row.discordId}>
-            <h3>
-              {row.profile?.robloxUsername || row.discordId} · {row.role}
-            </h3>
-            <p>
-              {row.specialty}
-              {row.bio ? ` — ${row.bio}` : ""}
-            </p>
-          </article>
-        ))}
+    <section className="page-hero page-hero-orange">
+      <div className="wrap page">
+        <h1 className="gradient-text-orange">Trainers</h1>
+        <p className="sub">People who run vods and ranked sets. `'trainer add @user specialty`</p>
+        <div className="stack">
+          {rows.map((row) => (
+            <article className="list-card" key={row.discordId}>
+              <h3>
+                {row.profile?.robloxUsername || row.discordId} · {row.role}
+              </h3>
+              <p>
+                {row.specialty}
+                {row.bio ? ` — ${row.bio}` : ""}
+              </p>
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   );
