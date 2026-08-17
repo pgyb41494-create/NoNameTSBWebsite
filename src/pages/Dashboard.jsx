@@ -10,14 +10,20 @@ const TABS = [
   { id: "blacklist", label: "Blacklisted" },
   { id: "trainers", label: "Trainers" },
   { id: "verify", label: "Verification" },
+  { id: "audit", label: "Audit log" },
+  { id: "invites", label: "Invites" },
 ];
 
 const EMPTY_VERIFY = {
+  pingRoleIds: [],
   approve: { addRoleIds: [], removeRoleIds: [], nickname: "", dmMessage: "", closeTicket: false },
   deny: { mode: "close", dmMessage: "" },
   panel: { title: "", description: "", footer: "", footerIcon: "", thumbnail: "", image: "", color: "", button: "" },
   ticket: { title: "", description: "", footer: "", footerIcon: "", thumbnail: "", image: "", color: "" },
 };
+
+const DEFAULT_INVITE_MESSAGE =
+  "{userinvited} Ha sido invitado/a por {user} y ahora tiene {invites} Invitaciones.";
 
 function mergeVerify(cfg) {
   return {
@@ -27,6 +33,7 @@ function mergeVerify(cfg) {
     deny: { ...EMPTY_VERIFY.deny, ...(cfg?.deny || {}) },
     panel: { ...EMPTY_VERIFY.panel, ...(cfg?.panel || {}) },
     ticket: { ...EMPTY_VERIFY.ticket, ...(cfg?.ticket || {}) },
+    pingRoleIds: Array.isArray(cfg?.pingRoleIds) ? cfg.pingRoleIds : [],
   };
 }
 
@@ -43,6 +50,8 @@ export default function Dashboard() {
   const [reports, setReports] = useState([]);
   const [roles, setRoles] = useState([]);
   const [verifyCfg, setVerifyCfg] = useState(null);
+  const [auditCfg, setAuditCfg] = useState(null);
+  const [inviteCfg, setInviteCfg] = useState(null);
   const [channels, setChannels] = useState([]);
   const [members, setMembers] = useState([]);
   const [picker, setPicker] = useState(null);
@@ -137,6 +146,39 @@ export default function Dashboard() {
   }, [guildId, tab, user]);
 
   useEffect(() => {
+    if (!user) return;
+    if (tab !== "audit" && tab !== "invites") return;
+    if (!guildId || guildId === "network") {
+      setAuditCfg(null);
+      setInviteCfg(null);
+      return;
+    }
+    loadChannelsFor(guildId);
+    if (tab === "audit") {
+      api.staff
+        .audit(guildId)
+        .then((cfg) => {
+          setAuditCfg(cfg || { channelId: "" });
+          setError("");
+        })
+        .catch((err) => setError(err.message));
+    }
+    if (tab === "invites") {
+      api.staff
+        .invites(guildId)
+        .then((cfg) => {
+          setInviteCfg({
+            enabled: !!cfg?.enabled,
+            channelId: cfg?.channelId || "",
+            message: cfg?.message || DEFAULT_INVITE_MESSAGE,
+          });
+          setError("");
+        })
+        .catch((err) => setError(err.message));
+    }
+  }, [guildId, tab, user]);
+
+  useEffect(() => {
     if (!user?.staff) return;
     if (tab !== "messages") return;
     if (form.mode !== "channel" && form.mode !== "dm") return;
@@ -151,6 +193,8 @@ export default function Dashboard() {
     setError("");
     setVerifyCfg(null);
     setRoles([]);
+    setAuditCfg(null);
+    setInviteCfg(null);
   }
 
   function leaveServer() {
@@ -160,6 +204,8 @@ export default function Dashboard() {
     setError("");
     setVerifyCfg(null);
     setRoles([]);
+    setAuditCfg(null);
+    setInviteCfg(null);
   }
 
   function guildIcon(guild) {
@@ -259,6 +305,30 @@ export default function Dashboard() {
     if (!names.length) return "";
     if (names.length <= 2) return names.join(", ");
     return `${names[0]}, ${names[1]} +${names.length - 2}`;
+  }
+
+  function channelLabel(id) {
+    const ch = channels.find((row) => row.id === id);
+    return ch ? `#${ch.name}` : "";
+  }
+
+  async function createLogChannel(kind) {
+    const name = kind === "audit" ? "audit-logs" : "invite-logs";
+    try {
+      const created = await api.staff.createChannel(guildId, { name });
+      setChannels((prev) => [...prev, created]);
+      if (kind === "audit") {
+        const saved = await api.staff.saveAudit(guildId, { channelId: created.id });
+        setAuditCfg(saved);
+      } else {
+        const saved = await api.staff.saveInvites(guildId, { ...(inviteCfg || {}), channelId: created.id });
+        setInviteCfg(saved);
+      }
+      setNotice(`Created #${created.name}.`);
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function searchMembers() {
@@ -374,7 +444,7 @@ export default function Dashboard() {
           <nav className="dash-tabs">
             {TABS.filter((item) => {
               if (guildId === "network") return isStaff && (item.id === "reports" || item.id === "messages");
-              if (item.id === "verify") return true;
+              if (item.id === "verify" || item.id === "audit" || item.id === "invites") return true;
               return isStaff && (item.id === "blacklist" || item.id === "trainers");
             }).map((item) => (
               <button key={item.id} className={tab === item.id ? "on" : ""} type="button" onClick={() => setTab(item.id)}>
@@ -630,6 +700,15 @@ export default function Dashboard() {
                   onChange={(e) => patchEmbed("ticket", "color", e.target.value)}
                 />
 
+                <h3>Staff pings</h3>
+                <p className="sub">These roles are pinged when a ticket opens and can see the channel.</p>
+                <PickerField
+                  label="Ping these roles"
+                  placeholder="Select roles"
+                  value={roleNames(verifyCfg.pingRoleIds)}
+                  onClick={() => setPicker("ping")}
+                />
+
                 <h3>Approve</h3>
                 <PickerField
                   label="Give these roles"
@@ -699,6 +778,89 @@ export default function Dashboard() {
                 </button>
               </form>
             ) : null
+          ) : null}
+
+          {tab === "audit" && hasServer && auditCfg ? (
+            <form
+              className="dash-form dash-form-col"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const saved = await api.staff.saveAudit(guildId, auditCfg);
+                  setAuditCfg(saved);
+                  setNotice("Audit log channel saved.");
+                  setError("");
+                } catch (err) {
+                  setError(err.message);
+                }
+              }}
+            >
+              <h1>Audit log</h1>
+              <p className="sub">Joins, leaves, bans, deleted messages, and verification actions post here.</p>
+              <PickerField
+                label="Channel"
+                placeholder="Select a channel"
+                value={channelLabel(auditCfg.channelId)}
+                onClick={() => setPicker("auditChannel")}
+              />
+              <div className="dash-form">
+                <button className="btn ghost" type="button" onClick={() => createLogChannel("audit")}>
+                  Create #audit-logs
+                </button>
+                <button className="btn" type="submit">
+                  Save
+                </button>
+              </div>
+            </form>
+          ) : null}
+
+          {tab === "invites" && hasServer && inviteCfg ? (
+            <form
+              className="dash-form dash-form-col"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const saved = await api.staff.saveInvites(guildId, inviteCfg);
+                  setInviteCfg(saved);
+                  setNotice("Invite tracker saved.");
+                  setError("");
+                } catch (err) {
+                  setError(err.message);
+                }
+              }}
+            >
+              <h1>Invite tracker</h1>
+              <p className="sub">
+                Turn it on with `/invitetracker` in Discord, then pick the channel and message here.
+                Variables: {"{userinvited}"} {"{user}"} {"{invites}"} {"{server}"} {"{code}"}
+              </p>
+              <Switch
+                checked={!!inviteCfg.enabled}
+                onChange={(on) => setInviteCfg({ ...inviteCfg, enabled: on })}
+                label="Invite tracker on"
+              />
+              <PickerField
+                label="Channel"
+                placeholder="Select a channel"
+                value={channelLabel(inviteCfg.channelId)}
+                onClick={() => setPicker("inviteChannel")}
+              />
+              <label className="dash-label">Join message</label>
+              <textarea
+                rows={4}
+                placeholder={DEFAULT_INVITE_MESSAGE}
+                value={inviteCfg.message}
+                onChange={(e) => setInviteCfg({ ...inviteCfg, message: e.target.value })}
+              />
+              <div className="dash-form">
+                <button className="btn ghost" type="button" onClick={() => createLogChannel("invites")}>
+                  Create #invite-logs
+                </button>
+                <button className="btn" type="submit">
+                  Save
+                </button>
+              </div>
+            </form>
           ) : null}
 
           {tab === "messages" && isStaff && guildId === "network" ? (
@@ -837,32 +999,56 @@ export default function Dashboard() {
         </div>
       </div>
       <PickerModal
-        open={picker === "give" || picker === "remove"}
+        open={picker === "give" || picker === "remove" || picker === "ping"}
         title="Role"
         subtitle="Select roles"
         searchPlaceholder="Search roles"
         items={roleItems()}
         selectedIds={
-          picker === "remove" ? verifyCfg?.approve.removeRoleIds || [] : verifyCfg?.approve.addRoleIds || []
+          picker === "ping"
+            ? verifyCfg?.pingRoleIds || []
+            : picker === "remove"
+              ? verifyCfg?.approve.removeRoleIds || []
+              : verifyCfg?.approve.addRoleIds || []
         }
         multiple
         onClose={() => setPicker(null)}
         onDone={(ids) => {
           if (!verifyCfg) return;
+          if (picker === "ping") {
+            setVerifyCfg({ ...verifyCfg, pingRoleIds: ids });
+            return;
+          }
           const key = picker === "remove" ? "removeRoleIds" : "addRoleIds";
           setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, [key]: ids } });
         }}
       />
       <PickerModal
-        open={picker === "channel"}
+        open={picker === "channel" || picker === "auditChannel" || picker === "inviteChannel"}
         title="Channel"
         subtitle="Select a channel"
         searchPlaceholder="Search channels"
         items={channels.map((ch) => ({ id: ch.id, name: ch.name, prefix: "#" }))}
-        selectedIds={form.channelId ? [form.channelId] : []}
+        selectedIds={
+          picker === "auditChannel"
+            ? auditCfg?.channelId
+              ? [auditCfg.channelId]
+              : []
+            : picker === "inviteChannel"
+              ? inviteCfg?.channelId
+                ? [inviteCfg.channelId]
+                : []
+              : form.channelId
+                ? [form.channelId]
+                : []
+        }
         multiple={false}
         onClose={() => setPicker(null)}
-        onDone={(id) => field("channelId", id)}
+        onDone={(id) => {
+          if (picker === "auditChannel") setAuditCfg((prev) => ({ ...(prev || {}), channelId: id }));
+          else if (picker === "inviteChannel") setInviteCfg((prev) => ({ ...(prev || {}), channelId: id }));
+          else field("channelId", id);
+        }}
       />
     </section>
   );
