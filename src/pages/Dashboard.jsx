@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate } from "react-router-dom";
 import { api } from "../api";
 import { useAuth } from "../auth";
 
@@ -13,10 +13,9 @@ const TABS = [
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
-  const navigate = useNavigate();
   const [tab, setTab] = useState("reports");
   const [guilds, setGuilds] = useState([]);
-  const [guildId, setGuildId] = useState("network");
+  const [guildId, setGuildId] = useState("");
   const [messageGuildId, setMessageGuildId] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -88,9 +87,6 @@ export default function Dashboard() {
       .then((data) => {
         const list = data.guilds || [];
         setGuilds(list);
-        if (list[0]?.id) {
-          setMessageGuildId((current) => current || list[0].id);
-        }
         setError("");
       })
       .catch((err) => setError(err.message));
@@ -129,9 +125,67 @@ export default function Dashboard() {
     loadChannelsFor(messageGuildId);
   }, [messageGuildId, tab, form.mode, user]);
 
+  function enterServer(id) {
+    setGuildId(id);
+    setMessageGuildId(id === "network" ? "" : id);
+    setTab("reports");
+    setNotice("");
+    setError("");
+    setVerifyCfg(null);
+    setRoles([]);
+  }
+
+  function leaveServer() {
+    setGuildId("");
+    setMessageGuildId("");
+    setNotice("");
+    setError("");
+    setVerifyCfg(null);
+    setRoles([]);
+  }
+
+  function guildIcon(guild) {
+    if (guild?.icon) return <img src={guild.icon} alt="" />;
+    const letter = String(guild?.name || "?").trim().charAt(0).toUpperCase() || "?";
+    return <span className="server-fallback">{letter}</span>;
+  }
+
   if (loading) return <section className="wrap page">Loading…</section>;
   if (!user) return <Navigate to="/" replace />;
   if (!user.staff) return <Navigate to="/" replace />;
+
+  const selectedGuild = guilds.find((g) => g.id === guildId) || null;
+  const hasServer = Boolean(guildId && guildId !== "network");
+
+  if (!guildId) {
+    return (
+      <section className="page-hero page-hero-blue">
+        <div className="wrap server-picker">
+          <h1>Servers</h1>
+          <p className="sub">Pick a server to open its configuration.</p>
+          {error ? <p className="banner banner-danger">{error}</p> : null}
+          <div className="server-grid">
+            <button className="server-card" type="button" onClick={() => enterServer("network")}>
+              <span className="server-fallback">All</span>
+              <div>
+                <strong>Network</strong>
+                <span>Reports across every server</span>
+              </div>
+            </button>
+            {guilds.map((g) => (
+              <button key={g.id} className="server-card" type="button" onClick={() => enterServer(g.id)}>
+                {guildIcon(g)}
+                <div>
+                  <strong>{g.name}</strong>
+                  <span>{g.memberCount ? `${g.memberCount} members` : "Enter configuration"}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   function field(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -237,15 +291,12 @@ export default function Dashboard() {
       <div className="wrap dash">
         <aside className="dash-side">
           <h2>Dashboard</h2>
-          <label className="dash-label">Scope</label>
-          <select value={guildId} onChange={(e) => setGuildId(e.target.value)}>
-            <option value="network">Network (all servers)</option>
-            {guilds.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
+          <div className="dash-server">
+            {guildId === "network" ? <span className="server-fallback">All</span> : guildIcon(selectedGuild)}
+            <div>
+              <strong>{guildId === "network" ? "Network" : selectedGuild?.name || "Server"}</strong>
+            </div>
+          </div>
           <nav className="dash-tabs">
             {TABS.map((item) => (
               <button key={item.id} className={tab === item.id ? "on" : ""} type="button" onClick={() => setTab(item.id)}>
@@ -253,8 +304,8 @@ export default function Dashboard() {
               </button>
             ))}
           </nav>
-          <button className="btn ghost" type="button" onClick={() => navigate("/")}>
-            Back to site
+          <button className="btn ghost" type="button" onClick={leaveServer}>
+            Change server
           </button>
         </aside>
 
@@ -386,149 +437,134 @@ export default function Dashboard() {
           ) : null}
 
           {tab === "verify" ? (
-            <>
-              <h1>Verification</h1>
-              <p className="sub">
-                Approve can add/remove roles, set a nickname, and DM them. Deny can close the ticket or make it staff-only.
-              </p>
-              {guildId === "network" ? (
-                <p className="sub">Pick a specific server in the sidebar to edit verification actions.</p>
-              ) : !verifyCfg ? (
-                <p className="sub">Loading verification settings…</p>
-              ) : (
-                <form
-                  className="dash-form dash-form-col"
-                  onSubmit={async (e) => {
-                    e.preventDefault();
-                    try {
-                      const saved = await api.staff.saveVerify(guildId, verifyCfg);
-                      setVerifyCfg(saved);
-                      setNotice("Verification actions saved.");
-                      setError("");
-                    } catch (err) {
-                      setError(err.message);
-                    }
-                  }}
-                >
-                  <h3>When Approve is pressed</h3>
-                  <label className="dash-label">Give these roles</label>
-                  <div className="role-list">
-                    {roles.length === 0 ? <p className="sub">No roles found.</p> : null}
-                    {roles.map((role) => (
-                      <label key={`add-${role.id}`}>
-                        <input
-                          type="checkbox"
-                          checked={verifyCfg.approve.addRoleIds.includes(role.id)}
-                          onChange={() => {
-                            const has = verifyCfg.approve.addRoleIds.includes(role.id);
-                            setVerifyCfg({
-                              ...verifyCfg,
-                              approve: {
-                                ...verifyCfg.approve,
-                                addRoleIds: has
-                                  ? verifyCfg.approve.addRoleIds.filter((id) => id !== role.id)
-                                  : [...verifyCfg.approve.addRoleIds, role.id],
-                              },
-                            });
-                          }}
-                        />
-                        <span style={role.color && role.color !== "#000000" ? { color: role.color } : undefined}>
-                          {role.name}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                  <label className="dash-label">Remove these roles</label>
-                  <div className="role-list">
-                    {roles.map((role) => (
-                      <label key={`rm-${role.id}`}>
-                        <input
-                          type="checkbox"
-                          checked={verifyCfg.approve.removeRoleIds.includes(role.id)}
-                          onChange={() => {
-                            const has = verifyCfg.approve.removeRoleIds.includes(role.id);
-                            setVerifyCfg({
-                              ...verifyCfg,
-                              approve: {
-                                ...verifyCfg.approve,
-                                removeRoleIds: has
-                                  ? verifyCfg.approve.removeRoleIds.filter((id) => id !== role.id)
-                                  : [...verifyCfg.approve.removeRoleIds, role.id],
-                              },
-                            });
-                          }}
-                        />
-                        <span style={role.color && role.color !== "#000000" ? { color: role.color } : undefined}>
-                          {role.name}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                  <label className="dash-label">Nickname (optional)</label>
+            hasServer && verifyCfg ? (
+              <form
+                className="dash-form dash-form-col"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const saved = await api.staff.saveVerify(guildId, verifyCfg);
+                    setVerifyCfg(saved);
+                    setNotice("Verification actions saved.");
+                    setError("");
+                  } catch (err) {
+                    setError(err.message);
+                  }
+                }}
+              >
+                <h3>Approve</h3>
+                <label className="dash-label">Give these roles</label>
+                <div className="role-list">
+                  {roles.length === 0 ? <p className="sub">No roles found.</p> : null}
+                  {roles.map((role) => (
+                    <label key={`add-${role.id}`}>
+                      <input
+                        type="checkbox"
+                        checked={verifyCfg.approve.addRoleIds.includes(role.id)}
+                        onChange={() => {
+                          const has = verifyCfg.approve.addRoleIds.includes(role.id);
+                          setVerifyCfg({
+                            ...verifyCfg,
+                            approve: {
+                              ...verifyCfg.approve,
+                              addRoleIds: has
+                                ? verifyCfg.approve.addRoleIds.filter((id) => id !== role.id)
+                                : [...verifyCfg.approve.addRoleIds, role.id],
+                            },
+                          });
+                        }}
+                      />
+                      <span style={role.color && role.color !== "#000000" ? { color: role.color } : undefined}>
+                        {role.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <label className="dash-label">Remove these roles</label>
+                <div className="role-list">
+                  {roles.map((role) => (
+                    <label key={`rm-${role.id}`}>
+                      <input
+                        type="checkbox"
+                        checked={verifyCfg.approve.removeRoleIds.includes(role.id)}
+                        onChange={() => {
+                          const has = verifyCfg.approve.removeRoleIds.includes(role.id);
+                          setVerifyCfg({
+                            ...verifyCfg,
+                            approve: {
+                              ...verifyCfg.approve,
+                              removeRoleIds: has
+                                ? verifyCfg.approve.removeRoleIds.filter((id) => id !== role.id)
+                                : [...verifyCfg.approve.removeRoleIds, role.id],
+                            },
+                          });
+                        }}
+                      />
+                      <span style={role.color && role.color !== "#000000" ? { color: role.color } : undefined}>
+                        {role.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <label className="dash-label">Nickname (optional)</label>
+                <input
+                  placeholder="{display}  ·  {roblox}  ·  {username}"
+                  value={verifyCfg.approve.nickname}
+                  onChange={(e) =>
+                    setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, nickname: e.target.value } })
+                  }
+                />
+                <label className="dash-label">DM after approve (optional)</label>
+                <textarea
+                  rows={3}
+                  placeholder="You’re verified."
+                  value={verifyCfg.approve.dmMessage}
+                  onChange={(e) =>
+                    setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, dmMessage: e.target.value } })
+                  }
+                />
+                <label>
                   <input
-                    placeholder="{display}  ·  {roblox}  ·  {username}"
-                    value={verifyCfg.approve.nickname}
+                    type="checkbox"
+                    checked={!!verifyCfg.approve.closeTicket}
                     onChange={(e) =>
-                      setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, nickname: e.target.value } })
+                      setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, closeTicket: e.target.checked } })
                     }
-                  />
-                  <label className="dash-label">DM after approve (optional)</label>
-                  <textarea
-                    rows={3}
-                    placeholder="You’re verified."
-                    value={verifyCfg.approve.dmMessage}
-                    onChange={(e) =>
-                      setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, dmMessage: e.target.value } })
-                    }
-                  />
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={!!verifyCfg.approve.closeTicket}
-                      onChange={(e) =>
-                        setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, closeTicket: e.target.checked } })
-                      }
-                    />{" "}
-                    Close the ticket after approve
-                  </label>
+                  />{" "}
+                  Close the ticket after approve
+                </label>
 
-                  <h3>When Deny is pressed</h3>
-                  <div className="tabs">
-                    <button
-                      className={`tab ${verifyCfg.deny.mode === "close" ? "on" : ""}`}
-                      type="button"
-                      onClick={() => setVerifyCfg({ ...verifyCfg, deny: { ...verifyCfg.deny, mode: "close" } })}
-                    >
-                      Close ticket
-                    </button>
-                    <button
-                      className={`tab ${verifyCfg.deny.mode === "private" ? "on" : ""}`}
-                      type="button"
-                      onClick={() => setVerifyCfg({ ...verifyCfg, deny: { ...verifyCfg.deny, mode: "private" } })}
-                    >
-                      Go private
-                    </button>
-                  </div>
-                  <p className="sub">
-                    {verifyCfg.deny.mode === "private"
-                      ? "Private removes the applicant from the ticket so staff can keep talking."
-                      : "Close deletes the ticket after 5 seconds."}
-                  </p>
-                  <label className="dash-label">DM after deny (optional)</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Your verification was denied."
-                    value={verifyCfg.deny.dmMessage}
-                    onChange={(e) =>
-                      setVerifyCfg({ ...verifyCfg, deny: { ...verifyCfg.deny, dmMessage: e.target.value } })
-                    }
-                  />
-                  <button className="btn" type="submit">
-                    Save verification actions
+                <h3>Deny</h3>
+                <div className="tabs">
+                  <button
+                    className={`tab ${verifyCfg.deny.mode === "close" ? "on" : ""}`}
+                    type="button"
+                    onClick={() => setVerifyCfg({ ...verifyCfg, deny: { ...verifyCfg.deny, mode: "close" } })}
+                  >
+                    Close ticket
                   </button>
-                </form>
-              )}
-            </>
+                  <button
+                    className={`tab ${verifyCfg.deny.mode === "private" ? "on" : ""}`}
+                    type="button"
+                    onClick={() => setVerifyCfg({ ...verifyCfg, deny: { ...verifyCfg.deny, mode: "private" } })}
+                  >
+                    Go private
+                  </button>
+                </div>
+                <label className="dash-label">DM after deny (optional)</label>
+                <textarea
+                  rows={3}
+                  placeholder="Your verification was denied."
+                  value={verifyCfg.deny.dmMessage}
+                  onChange={(e) =>
+                    setVerifyCfg({ ...verifyCfg, deny: { ...verifyCfg.deny, dmMessage: e.target.value } })
+                  }
+                />
+                <button className="btn" type="submit">
+                  Save
+                </button>
+              </form>
+            ) : null
           ) : null}
 
           {tab === "messages" ? (

@@ -19,7 +19,7 @@ export function LoginGate({ children }) {
           <h1>Log in to continue</h1>
           <p className="lead">Discord login is required to view blacklisted players, trainers, and submit reports.</p>
           <a className="btn btn-discord" href={loginUrl}>
-            Log in with Discord
+            Continue with Discord
           </a>
         </div>
       </div>

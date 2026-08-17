@@ -21,7 +21,7 @@ export default function Home() {
       <section className="hero">
         <div className="wrap">
           <div className="kicker">Strongest Battlegrounds · Competitive</div>
-          <p className="lead">A Discord bot for TSB clans — profiles, boards, lineups, trainers, and an AI coach.</p>
+          <p className="lead">Profiles, boards, lineups, and an AI coach for TSB clans.</p>
           <div className="hero-actions">
             <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
               Add bot

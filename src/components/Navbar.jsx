@@ -39,7 +39,7 @@ export function Navbar() {
             </>
           ) : (
             <a className="btn btn-discord" href={loginUrl}>
-              Log in with Discord
+              Log in
             </a>
           )}
         </div>
