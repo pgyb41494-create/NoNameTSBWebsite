@@ -1,7 +1,10 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { useEffect } from "react";
-import { brand } from "../api";
+import { useEffect, useState } from "react";
+import { api, brand } from "../api";
 import { useAuth } from "../auth";
+import { BoardAvatar } from "../components/BoardAvatar";
+
+const OWNERS = ["1515419032520626261", "1196512159266504797"];
 
 const FEATURES = [
   { title: "Server setup", text: "Admins run 'serversetup in Discord and pick leaderboard, ranking, score, or lineup." },
@@ -19,11 +22,19 @@ const STEPS = [
 export default function Home() {
   const { user, loading, loginUrl } = useAuth();
   const [params, setParams] = useSearchParams();
+  const [people, setPeople] = useState(null);
 
   useEffect(() => {
     if (![...params.keys()].length) return;
     setParams({}, { replace: true });
   }, [params, setParams]);
+
+  useEffect(() => {
+    api.stats().then((s) => {
+      const n = Number(s?.players || s?.memberTotal || 0);
+      setPeople(Number.isFinite(n) ? n : 0);
+    });
+  }, []);
 
   const dashHref = user ? "/dashboard" : loginUrl;
   const dashIsLink = Boolean(user);
@@ -53,10 +64,24 @@ export default function Home() {
           </div>
         </div>
         <div className="home-hero-visual">
-          <div className="home-hero-mark">
-            <img src={brand.gif} alt="" />
+          <div className="home-owners">
+            {OWNERS.map((id) => (
+              <a
+                key={id}
+                className="home-owner"
+                href={`https://discord.com/users/${id}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <BoardAvatar userId={id} className="home-owner-pfp" alt="" />
+                <span className="home-owner-id">{id}</span>
+              </a>
+            ))}
+            <p className="home-owner-role">Bot owner</p>
+            <p className="home-owner-users">
+              {people == null ? "—" : people.toLocaleString()} people use the bot
+            </p>
           </div>
-          <p className="home-hero-caption">The Strongest Battlegrounds</p>
         </div>
       </section>
 
