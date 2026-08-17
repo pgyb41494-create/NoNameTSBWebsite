@@ -19,6 +19,7 @@
   --btn-radius: 8px;
   --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --display: "Syne", "Space Grotesk", sans-serif;
+  --page-width: min(1280px, calc(100% - 48px));
 }
 
 * { box-sizing: border-box; }
@@ -64,7 +65,7 @@ h1, h2, h3, .font-display {
 }
 
 .shell { min-height: 100vh; display: flex; flex-direction: column; }
-.wrap { width: min(980px, calc(100% - 40px)); margin: 0 auto; }
+.wrap { width: var(--page-width); margin: 0 auto; }
 .grow { flex: 1; }
 
 .glass,
@@ -98,7 +99,7 @@ h1, h2, h3, .font-display {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  width: min(980px, calc(100% - 40px));
+  width: var(--page-width);
   margin: 0 auto;
   padding: 12px 0;
 }
@@ -228,7 +229,7 @@ h1, h2, h3, .font-display {
 }
 .banner {
   margin: 0 0 18px;
-  max-width: 460px;
+  max-width: none;
   padding: 10px 14px;
   border-radius: var(--radius);
   font-size: 14px;
@@ -378,10 +379,11 @@ h1, h2, h3, .font-display {
 
 .dash {
   display: grid;
-  grid-template-columns: 220px 1fr;
-  gap: 24px;
-  padding: 32px 0 80px;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 20px;
+  padding: 20px 0 64px;
   align-items: start;
+  width: 100%;
 }
 .dash-side {
   border-radius: var(--radius);
