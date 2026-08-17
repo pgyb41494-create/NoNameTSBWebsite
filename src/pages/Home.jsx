@@ -7,16 +7,16 @@ import { BoardAvatar } from "../components/BoardAvatar";
 const OWNERS = ["1515419032520626261", "1196512159266504797"];
 
 const FEATURES = [
-  { title: "Server setup", text: "Admins run 'serversetup in Discord and pick leaderboard, ranking, score, or lineup." },
-  { title: "/profile", text: "Roblox-linked player cards. Same data feeds boards, lineups, and the coach." },
-  { title: "Verification", text: "Staff post a panel. Members prove their Roblox from /profile, then get approved in a ticket." },
-  { title: "TSB AI Coach", text: "/tsbcoach watches a clip, checks the username against /profile, then tells you what to improve." },
+  { title: "Server setup", text: "Type 'serversetup and turn on leaderboard, ranking, score, or lineup." },
+  { title: "/profile", text: "Link your Roblox account. Boards and the coach pull from that." },
+  { title: "Verification", text: "Staff post a panel. People prove their Roblox in a ticket, then you approve them." },
+  { title: "TSB coach", text: "/tsbcoach watches a clip, checks the name against /profile, and tells you what to fix." },
 ];
 
 const STEPS = [
-  { title: "Invite", text: "Add Ascendant and accept the permissions it asks for." },
-  { title: "Log in", text: "Open the dashboard, pick your server, then save verification and staff tools." },
-  { title: "Setup", text: "Admins can run 'serversetup in Discord for boards, ranking, score, and lineup." },
+  { title: "Invite", text: "Add Ascendant to your server." },
+  { title: "Log in", text: "Open the dashboard and pick that server." },
+  { title: "Setup", text: "Run 'serversetup for boards. Use the dashboard for verify and panels." },
 ];
 
 export default function Home() {
@@ -44,9 +44,9 @@ export default function Home() {
       <section className="wrap home-hero">
         <div className="home-hero-copy">
           <h1 className="home-hero-brand">{brand.name}</h1>
-          <p className="home-hero-title">Ops for TSB clans that actually run.</p>
+          <p className="home-hero-title">TSB bot for Discord clans.</p>
           <p className="home-hero-lead">
-            Profiles, boards, lineups, verification, and an AI coach — configured in Discord and the dashboard, not buried in commands.
+            Leaderboards, lineup, ranking, verify, and a clip coach. Most of it is set up in Discord. The rest is on the dashboard.
           </p>
           <div className="home-hero-actions">
             <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
@@ -86,16 +86,16 @@ export default function Home() {
       </section>
 
       <section className="wrap home-block">
-        <p className="home-kicker">Dashboard · Setup · Clan</p>
-        <h2 className="home-block-title">Server tools live here.</h2>
+        <p className="home-kicker">Dashboard</p>
+        <h2 className="home-block-title">Pick a server and edit it.</h2>
         <p className="home-block-body">
-          Sign in with Discord to open the dashboard, invite the bot, and configure verification for servers you admin.
+          Log in, pick a server you admin, and edit verify, panels, audit logs, and invites from there.
         </p>
       </section>
 
       <section className="wrap home-block">
         <p className="home-kicker">In Discord</p>
-        <h2 className="home-block-title">What it runs</h2>
+        <h2 className="home-block-title">What you can turn on</h2>
         <ul className="home-rail">
           {FEATURES.map((item, index) => (
             <li key={item.title}>
@@ -110,8 +110,8 @@ export default function Home() {
       </section>
 
       <section className="wrap home-block">
-        <p className="home-kicker">Start here</p>
-        <h2 className="home-block-title">Three steps to get going.</h2>
+        <p className="home-kicker">Setup</p>
+        <h2 className="home-block-title">How to add it</h2>
         <ol className="home-start">
           {STEPS.map((step, index) => (
             <li key={step.title}>
@@ -126,7 +126,6 @@ export default function Home() {
       </section>
 
       <section className="wrap home-close">
-        <p>Built for clans that stay online.</p>
         <div className="home-close-actions">
           <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
             Add to Discord
