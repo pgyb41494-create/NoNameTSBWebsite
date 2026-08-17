@@ -881,6 +881,21 @@ h1, h2, h3, .font-display {
 }
 .board-time { color: var(--dim); }
 
+.trainer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.trainer-card {
+  background: #141416;
+  border: 0;
+  border-radius: 16px;
+  padding: 22px;
+  min-width: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
