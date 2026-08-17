@@ -1,61 +1,120 @@
-import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { api, brand } from "../api";
+import { useEffect } from "react";
+import { brand } from "../api";
+import { useAuth } from "../auth";
+
+const FEATURES = [
+  { title: "Server setup", text: "Admins run 'serversetup in Discord and pick leaderboard, ranking, score, or lineup." },
+  { title: "/profile", text: "Roblox-linked player cards. Same data feeds boards, lineups, and the coach." },
+  { title: "Verification", text: "Staff post a panel. Members prove their Roblox from /profile, then get approved in a ticket." },
+  { title: "TSB AI Coach", text: "/tsbcoach watches a clip, checks the username against /profile, then tells you what to improve." },
+];
+
+const STEPS = [
+  { title: "Invite", text: "Add Ascendant and accept the permissions it asks for." },
+  { title: "Log in", text: "Open the dashboard, pick your server, then save verification and staff tools." },
+  { title: "Setup", text: "Admins can run 'serversetup in Discord for boards, ranking, score, and lineup." },
+];
 
 export default function Home() {
-  const [stats, setStats] = useState({ players: 0, servers: 0, wars: 0 });
+  const { user, loading, loginUrl } = useAuth();
   const [params, setParams] = useSearchParams();
 
   useEffect(() => {
-    api.stats().then(setStats);
-  }, []);
-
-  useEffect(() => {
-    // Strip OAuth leftovers quietly (no popup banners)
     if (![...params.keys()].length) return;
     setParams({}, { replace: true });
   }, [params, setParams]);
 
+  const dashHref = user?.staff ? "/dashboard" : loginUrl;
+  const dashIsLink = Boolean(user?.staff);
+
   return (
-    <div>
-      <section className="hero">
-        <div className="wrap">
-          <h1>{brand.name}</h1>
-          <p className="lead">Profiles, boards, lineups, and an AI coach for TSB clans.</p>
-          <div className="hero-actions">
-            <a className="btn ghost" href={brand.invite} target="_blank" rel="noreferrer">
-              Add bot
+    <div className="home-page">
+      <section className="wrap home-hero">
+        <div className="home-hero-copy">
+          <h1 className="home-hero-brand">{brand.name}</h1>
+          <p className="home-hero-title">Ops for TSB clans that actually run.</p>
+          <p className="home-hero-lead">
+            Profiles, boards, lineups, verification, and an AI coach — configured in Discord and the dashboard, not buried in commands.
+          </p>
+          <div className="home-hero-actions">
+            <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
+              Add to Discord
             </a>
-            <Link className="btn ghost" to="/trainers">
-              Trainers
-            </Link>
-          </div>
-          <div className="stats stats-two">
-            <div className="stat">
-              <b>{stats.players}</b>
-              <span>Players</span>
-            </div>
-            <div className="stat">
-              <b>{stats.servers}</b>
-              <span>Servers</span>
-            </div>
+            {dashIsLink ? (
+              <Link className="home-text-cta" to="/dashboard">
+                Open dashboard →
+              </Link>
+            ) : (
+              <a className="home-text-cta" href={loading ? undefined : loginUrl}>
+                Log in →
+              </a>
+            )}
           </div>
         </div>
+        <div className="home-hero-visual">
+          <div className="home-hero-mark">
+            <img src={brand.gif} alt="" />
+          </div>
+          <p className="home-hero-caption">The Strongest Battlegrounds</p>
+        </div>
       </section>
-      <section className="wrap page" style={{ paddingTop: 12 }}>
-        <div className="features">
-          <article className="feature">
-            <h3>Server setup</h3>
-            <p>Admins run 'serversetup in Discord and pick leaderboard, ranking, score, or lineup.</p>
-          </article>
-          <article className="feature">
-            <h3>/profile</h3>
-            <p>Roblox-linked player cards. Same data feeds boards, lineups, and the coach.</p>
-          </article>
-          <article className="feature">
-            <h3>TSB AI Coach</h3>
-            <p>/tsbcoach watches a clip, checks the username/avatar against /profile, then tells you what to improve.</p>
-          </article>
+
+      <section className="wrap home-block">
+        <p className="home-kicker">Dashboard · Setup · Clan</p>
+        <h2 className="home-block-title">Server tools live here.</h2>
+        <p className="home-block-body">
+          Sign in with Discord to manage blacklists, trainers, verification, and bot messages — without digging through slash menus.
+        </p>
+      </section>
+
+      <section className="wrap home-block">
+        <p className="home-kicker">In Discord</p>
+        <h2 className="home-block-title">What it runs</h2>
+        <ul className="home-rail">
+          {FEATURES.map((item, index) => (
+            <li key={item.title}>
+              <span className="home-rail-index">{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="wrap home-block">
+        <p className="home-kicker">Start here</p>
+        <h2 className="home-block-title">Three steps to get going.</h2>
+        <ol className="home-start">
+          {STEPS.map((step, index) => (
+            <li key={step.title}>
+              <span className="home-start-step">{String(index + 1).padStart(2, "0")}</span>
+              <div>
+                <strong>{step.title}</strong>
+                <p>{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section className="wrap home-close">
+        <p>Built for clans that stay online.</p>
+        <div className="home-close-actions">
+          <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
+            Add to Discord
+          </a>
+          {dashIsLink ? (
+            <Link className="home-text-cta" to={dashHref}>
+              Open dashboard →
+            </Link>
+          ) : (
+            <a className="home-text-cta" href={loginUrl}>
+              Log in →
+            </a>
+          )}
         </div>
       </section>
     </div>

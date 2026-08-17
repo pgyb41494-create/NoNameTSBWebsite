@@ -169,22 +169,32 @@ export default function Dashboard() {
           <h1>Servers</h1>
           <p className="sub">Pick a server to open its configuration.</p>
           {error ? <p className="banner banner-danger">{error}</p> : null}
-          <div className="server-grid">
-            <button className="server-card" type="button" onClick={() => enterServer("network")}>
-              <span className="server-fallback">All</span>
-              <div>
-                <strong>Network</strong>
-                <span>Reports across every server</span>
-              </div>
-            </button>
-            {guilds.map((g) => (
-              <button key={g.id} className="server-card" type="button" onClick={() => enterServer(g.id)}>
-                {guildIcon(g)}
+          <div className="server-list">
+            <div className="server-row">
+              <div className="server-row-meta">
+                <span className="server-fallback">All</span>
                 <div>
-                  <strong>{g.name}</strong>
-                  <span>{g.memberCount ? `${g.memberCount} members` : "Enter configuration"}</span>
+                  <strong>Network</strong>
+                  <span>Reports across every server</span>
                 </div>
+              </div>
+              <button className="btn" type="button" onClick={() => enterServer("network")}>
+                Settings
               </button>
+            </div>
+            {guilds.map((g) => (
+              <div key={g.id} className="server-row">
+                <div className="server-row-meta">
+                  {guildIcon(g)}
+                  <div>
+                    <strong>{g.name}</strong>
+                    <span>{g.memberCount ? `${g.memberCount} members` : "Admin"}</span>
+                  </div>
+                </div>
+                <button className="btn" type="button" onClick={() => enterServer(g.id)}>
+                  Settings
+                </button>
+              </div>
             ))}
           </div>
         </div>

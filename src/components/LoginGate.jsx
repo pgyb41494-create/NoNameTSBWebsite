@@ -1,3 +1,4 @@
+import { brand } from "../api";
 import { useAuth } from "../auth";
 
 export function LoginGate({ children }) {
@@ -6,7 +7,7 @@ export function LoginGate({ children }) {
   if (loading) {
     return (
       <div className="login-gate">
-        <p>Loading…</p>
+        <p className="sub">Loading…</p>
       </div>
     );
   }
@@ -15,9 +16,9 @@ export function LoginGate({ children }) {
     return (
       <div className="login-gate">
         <div className="login-card">
-          <p className="kicker">Strongest Battlegrounds · Competitive</p>
-          <h1>Log in to continue</h1>
-          <p className="lead">Discord login is required to view blacklisted players, trainers, and submit reports.</p>
+          <img src={brand.gif} alt="" />
+          <h1>Log in</h1>
+          <p className="lead">Discord login is required to continue.</p>
           <a className="btn btn-discord" href={loginUrl}>
             Continue with Discord
           </a>

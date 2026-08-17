@@ -13,23 +13,42 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <LoginGate>
-          <div className="shell">
-            <Navbar />
-            <main className="grow">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/blacklist" element={<Blacklist />} />
-                <Route path="/trainers" element={<Trainers />} />
-                <Route path="/wars" element={<Navigate to="/" replace />} />
-                <Route path="/report" element={<Report />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-        </LoginGate>
+        <div className="shell">
+          <Navbar />
+          <main className="grow">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route
+                path="/blacklist"
+                element={
+                  <LoginGate>
+                    <Blacklist />
+                  </LoginGate>
+                }
+              />
+              <Route
+                path="/trainers"
+                element={
+                  <LoginGate>
+                    <Trainers />
+                  </LoginGate>
+                }
+              />
+              <Route
+                path="/report"
+                element={
+                  <LoginGate>
+                    <Report />
+                  </LoginGate>
+                }
+              />
+              <Route path="/wars" element={<Navigate to="/" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
       </BrowserRouter>
     </AuthProvider>
   );
