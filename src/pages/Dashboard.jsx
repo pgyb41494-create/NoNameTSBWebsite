@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api } from "../api";
+import { useAuth } from "../auth";
 import { PickerField, PickerModal, Switch } from "../components/PickerModal";
 
 const TABS = [
