@@ -85,7 +85,7 @@ export default function Dashboard() {
     const isNetwork = id === "network";
     const [bl, tr, rp] = await Promise.all([
       isNetwork ? Promise.resolve({ entries: [] }) : api.staff.blacklist(id),
-      isNetwork ? Promise.resolve({ trainers: [] }) : api.staff.trainers(id),
+      isNetwork ? api.staff.trainers("network") : Promise.resolve({ trainers: [] }),
       isNetwork ? api.staff.reports().catch(() => ({ reports: [] })) : Promise.resolve({ reports: [] }),
     ]);
     setBlacklist(bl.entries || []);
@@ -246,7 +246,7 @@ export default function Dashboard() {
                   <span className="server-fallback">All</span>
                   <div>
                     <strong>Network</strong>
-                    <span>Reports and messages</span>
+                    <span>Reports, messages, and trainers</span>
                   </div>
                 </div>
                 <button className="btn" type="button" onClick={() => enterServer("network")}>
@@ -377,7 +377,7 @@ export default function Dashboard() {
   async function addTrainer(e) {
     e.preventDefault();
     try {
-      const data = await api.staff.addTrainer(guildId, {
+      const data = await api.staff.addTrainer("network", {
         discordId: form.discordId,
         stage: form.stage,
         price: form.price,
@@ -450,9 +450,11 @@ export default function Dashboard() {
           </div>
           <nav className="dash-tabs">
             {TABS.filter((item) => {
-              if (guildId === "network") return isStaff && (item.id === "reports" || item.id === "messages");
+              if (guildId === "network") {
+                return isStaff && (item.id === "reports" || item.id === "messages" || item.id === "trainers");
+              }
               if (item.id === "verify" || item.id === "panels" || item.id === "audit" || item.id === "invites") return true;
-              return isStaff && (item.id === "blacklist" || item.id === "trainers");
+              return isStaff && item.id === "blacklist";
             }).map((item) => (
               <button key={item.id} className={tab === item.id ? "on" : ""} type="button" onClick={() => setTab(item.id)}>
                 {item.label}
@@ -554,9 +556,10 @@ export default function Dashboard() {
             </>
           ) : null}
 
-          {tab === "trainers" && isStaff && hasServer ? (
+          {tab === "trainers" && isStaff && guildId === "network" ? (
             <>
               <h1>Trainers</h1>
+              <p className="sub">Network directory shown on the public Trainers page.</p>
               <form className="dash-form dash-form-col" onSubmit={addTrainer}>
                 <input placeholder="Discord user ID" value={form.discordId} onChange={(e) => field("discordId", e.target.value)} required />
                 <input placeholder="Stage (e.g. 1 High Weak)" value={form.stage} onChange={(e) => field("stage", e.target.value)} required />
@@ -579,7 +582,7 @@ export default function Dashboard() {
                       className="btn ghost"
                       type="button"
                       onClick={async () => {
-                        const data = await api.staff.removeTrainer(guildId, row.discordId);
+                        const data = await api.staff.removeTrainer("network", row.discordId);
                         setTrainers(data.trainers || []);
                       }}
                     >

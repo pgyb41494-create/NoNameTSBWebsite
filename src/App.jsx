@@ -6,6 +6,7 @@ import { Footer } from "./components/Footer";
 import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Report from "./pages/Report";
+import Trainers from "./pages/Trainers";
 
 export default function App() {
   return (
@@ -24,8 +25,8 @@ export default function App() {
                   </LoginGate>
                 }
               />
+              <Route path="/trainers" element={<Trainers />} />
               <Route path="/blacklist" element={<Navigate to="/" replace />} />
-              <Route path="/trainers" element={<Navigate to="/" replace />} />
               <Route path="/wars" element={<Navigate to="/" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="*" element={<Navigate to="/" replace />} />

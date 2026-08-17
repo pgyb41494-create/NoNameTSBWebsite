@@ -14,6 +14,7 @@ export function Footer() {
           </span>
         </div>
         <nav className="footer-links">
+          <Link to="/trainers">Trainers</Link>
           {user ? <Link to="/dashboard">Dashboard</Link> : null}
           {user ? <Link to="/report">Report</Link> : null}
         </nav>
