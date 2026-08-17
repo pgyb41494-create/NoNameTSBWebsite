@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { brand } from "../api";
+import { useAuth } from "../auth";
 
 export function Footer() {
+  const { user } = useAuth();
   return (
     <footer className="footer">
       <div className="wrap footer-inner">
@@ -12,9 +14,8 @@ export function Footer() {
           </span>
         </div>
         <nav className="footer-links">
-          <Link to="/blacklist">Blacklisted</Link>
-          <Link to="/trainers">Trainers</Link>
-          <Link to="/report">Report</Link>
+          {user ? <Link to="/dashboard">Dashboard</Link> : null}
+          {user ? <Link to="/report">Report</Link> : null}
         </nav>
       </div>
     </footer>

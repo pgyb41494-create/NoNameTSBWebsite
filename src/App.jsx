@@ -4,8 +4,6 @@ import { LoginGate } from "./components/LoginGate";
 import { Navbar } from "./components/Navbar";
 import { Footer } from "./components/Footer";
 import Home from "./pages/Home";
-import Blacklist from "./pages/Blacklist";
-import Trainers from "./pages/Trainers";
 import Dashboard from "./pages/Dashboard";
 import Report from "./pages/Report";
 
@@ -19,22 +17,6 @@ export default function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route
-                path="/blacklist"
-                element={
-                  <LoginGate>
-                    <Blacklist />
-                  </LoginGate>
-                }
-              />
-              <Route
-                path="/trainers"
-                element={
-                  <LoginGate>
-                    <Trainers />
-                  </LoginGate>
-                }
-              />
-              <Route
                 path="/report"
                 element={
                   <LoginGate>
@@ -42,6 +24,8 @@ export default function App() {
                   </LoginGate>
                 }
               />
+              <Route path="/blacklist" element={<Navigate to="/" replace />} />
+              <Route path="/trainers" element={<Navigate to="/" replace />} />
               <Route path="/wars" element={<Navigate to="/" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="*" element={<Navigate to="/" replace />} />

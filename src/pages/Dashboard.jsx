@@ -1,16 +1,34 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { api } from "../api";
+import { api, brand } from "../api";
 import { useAuth } from "../auth";
 import { PickerField, PickerModal, Switch } from "../components/PickerModal";
 
 const TABS = [
   { id: "reports", label: "Reports" },
+  { id: "messages", label: "Messages" },
   { id: "blacklist", label: "Blacklisted" },
   { id: "trainers", label: "Trainers" },
   { id: "verify", label: "Verification" },
-  { id: "messages", label: "Messages" },
 ];
+
+const EMPTY_VERIFY = {
+  approve: { addRoleIds: [], removeRoleIds: [], nickname: "", dmMessage: "", closeTicket: false },
+  deny: { mode: "close", dmMessage: "" },
+  panel: { title: "", description: "", footer: "", footerIcon: "", thumbnail: "", image: "", color: "", button: "" },
+  ticket: { title: "", description: "", footer: "", footerIcon: "", thumbnail: "", image: "", color: "" },
+};
+
+function mergeVerify(cfg) {
+  return {
+    ...EMPTY_VERIFY,
+    ...(cfg || {}),
+    approve: { ...EMPTY_VERIFY.approve, ...(cfg?.approve || {}) },
+    deny: { ...EMPTY_VERIFY.deny, ...(cfg?.deny || {}) },
+    panel: { ...EMPTY_VERIFY.panel, ...(cfg?.panel || {}) },
+    ticket: { ...EMPTY_VERIFY.ticket, ...(cfg?.ticket || {}) },
+  };
+}
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -52,11 +70,11 @@ export default function Dashboard() {
   });
 
   async function refreshLists(id = guildId) {
-    if (!id) return;
+    if (!id || !user?.staff) return;
     const isNetwork = id === "network";
     const [bl, tr, rp] = await Promise.all([
-      api.staff.blacklist(id),
-      api.staff.trainers(id),
+      isNetwork ? Promise.resolve({ entries: [] }) : api.staff.blacklist(id),
+      isNetwork ? Promise.resolve({ trainers: [] }) : api.staff.trainers(id),
       isNetwork ? api.staff.reports().catch(() => ({ reports: [] })) : Promise.resolve({ reports: [] }),
     ]);
     setBlacklist(bl.entries || []);
@@ -83,7 +101,7 @@ export default function Dashboard() {
   }
 
   useEffect(() => {
-    if (!user?.staff) return;
+    if (!user) return;
     api.staff
       .guilds()
       .then((data) => {
@@ -95,12 +113,12 @@ export default function Dashboard() {
   }, [user]);
 
   useEffect(() => {
-    if (!guildId || !user?.staff) return;
+    if (!guildId || !user) return;
     refreshLists(guildId).catch((err) => setError(err.message));
   }, [guildId, user]);
 
   useEffect(() => {
-    if (!user?.staff) return;
+    if (!user) return;
     if (tab !== "verify") return;
     if (!guildId || guildId === "network") {
       setRoles([]);
@@ -113,12 +131,7 @@ export default function Dashboard() {
     ])
       .then(([roleData, cfg]) => {
         setRoles(roleData.roles || []);
-        setVerifyCfg(
-          cfg || {
-            approve: { addRoleIds: [], removeRoleIds: [], nickname: "", dmMessage: "", closeTicket: false },
-            deny: { mode: "close", dmMessage: "" },
-          }
-        );
+        setVerifyCfg(mergeVerify(cfg));
         setError("");
       });
   }, [guildId, tab, user]);
@@ -133,7 +146,7 @@ export default function Dashboard() {
   function enterServer(id) {
     setGuildId(id);
     setMessageGuildId(id === "network" ? "" : id);
-    setTab(id === "network" ? "reports" : "blacklist");
+    setTab(id === "network" ? "reports" : "verify");
     setNotice("");
     setError("");
     setVerifyCfg(null);
@@ -157,43 +170,61 @@ export default function Dashboard() {
 
   if (loading) return <section className="wrap page">Loading…</section>;
   if (!user) return <Navigate to="/" replace />;
-  if (!user.staff) return <Navigate to="/" replace />;
 
   const selectedGuild = guilds.find((g) => g.id === guildId) || null;
   const hasServer = Boolean(guildId && guildId !== "network");
+  const isStaff = Boolean(user.staff);
+  const botGuilds = guilds.filter((g) => g.botPresent);
 
   if (!guildId) {
     return (
       <section className="page-hero page-hero-blue">
         <div className="wrap server-picker">
           <h1>Servers</h1>
-          <p className="sub">Pick a server to open its configuration.</p>
+          <p className="sub">Pick a server you admin. If the bot is not in it yet, invite it first.</p>
           {error ? <p className="banner banner-danger">{error}</p> : null}
+          {!guilds.length && !isStaff ? (
+            <p className="sub">No servers yet. Log out and log in again so Discord can share the servers you admin.</p>
+          ) : null}
           <div className="server-list">
-            <div className="server-row">
-              <div className="server-row-meta">
-                <span className="server-fallback">All</span>
-                <div>
-                  <strong>Network</strong>
-                  <span>Reports across every server</span>
+            {isStaff ? (
+              <div className="server-row">
+                <div className="server-row-meta">
+                  <span className="server-fallback">All</span>
+                  <div>
+                    <strong>Network</strong>
+                    <span>Reports and messages</span>
+                  </div>
                 </div>
+                <button className="btn" type="button" onClick={() => enterServer("network")}>
+                  Settings
+                </button>
               </div>
-              <button className="btn" type="button" onClick={() => enterServer("network")}>
-                Settings
-              </button>
-            </div>
+            ) : null}
             {guilds.map((g) => (
               <div key={g.id} className="server-row">
                 <div className="server-row-meta">
                   {guildIcon(g)}
                   <div>
                     <strong>{g.name}</strong>
-                    <span>{g.memberCount ? `${g.memberCount} members` : "Admin"}</span>
+                    <span>
+                      {g.botPresent
+                        ? g.memberCount
+                          ? `${g.memberCount} members`
+                          : "Bot is in this server"
+                        : "Bot is not in this server"}
+                    </span>
                   </div>
                 </div>
-                <button className="btn" type="button" onClick={() => enterServer(g.id)}>
-                  Settings
-                </button>
+                {g.botPresent ? (
+                  <button className="btn" type="button" onClick={() => enterServer(g.id)}>
+                    Settings
+                  </button>
+                ) : (
+                  <a className="btn ghost" href={g.inviteUrl || brand.invite} target="_blank" rel="noreferrer">
+                    Invite Bot
+                  </a>
+                )}
               </div>
             ))}
           </div>
@@ -204,6 +235,13 @@ export default function Dashboard() {
 
   function field(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function patchEmbed(kind, key, value) {
+    setVerifyCfg((prev) => ({
+      ...prev,
+      [kind]: { ...(prev?.[kind] || {}), [key]: value },
+    }));
   }
 
   function roleItems() {
@@ -335,9 +373,9 @@ export default function Dashboard() {
           </div>
           <nav className="dash-tabs">
             {TABS.filter((item) => {
-              if (item.id === "reports") return guildId === "network";
-              if (item.id === "verify" || item.id === "messages") return guildId !== "network";
-              return true;
+              if (guildId === "network") return isStaff && (item.id === "reports" || item.id === "messages");
+              if (item.id === "verify") return true;
+              return isStaff && (item.id === "blacklist" || item.id === "trainers");
             }).map((item) => (
               <button key={item.id} className={tab === item.id ? "on" : ""} type="button" onClick={() => setTab(item.id)}>
                 {item.label}
@@ -353,7 +391,7 @@ export default function Dashboard() {
           {error ? <p className="banner banner-danger">{error}</p> : null}
           {notice ? <p className="banner banner-ok">{notice}</p> : null}
 
-          {tab === "reports" && guildId === "network" ? (
+          {tab === "reports" && guildId === "network" && isStaff ? (
             <>
               <h1>Pending reports</h1>
               <p className="sub">Approve to push a report onto the public blacklist.</p>
@@ -403,7 +441,7 @@ export default function Dashboard() {
             </>
           ) : null}
 
-          {tab === "blacklist" ? (
+          {tab === "blacklist" && isStaff && hasServer ? (
             <>
               <h1>Blacklisted</h1>
               <form className="dash-form dash-form-col" onSubmit={addBlacklist}>
@@ -439,7 +477,7 @@ export default function Dashboard() {
             </>
           ) : null}
 
-          {tab === "trainers" ? (
+          {tab === "trainers" && isStaff && hasServer ? (
             <>
               <h1>Trainers</h1>
               <form className="dash-form dash-form-col" onSubmit={addTrainer}>
@@ -492,6 +530,106 @@ export default function Dashboard() {
                   }
                 }}
               >
+                <h1>Verification</h1>
+                <p className="sub">
+                  Variables: {"{server}"} {"{prefix}"} {"{bot}"} {"{membercount}"} {"{mention}"} {"{username}"} {"{display}"} {"{roblox}"}
+                </p>
+                <h3>Ticket panel</h3>
+                <label className="dash-label">Title</label>
+                <input
+                  placeholder="Verification"
+                  value={verifyCfg.panel.title}
+                  onChange={(e) => patchEmbed("panel", "title", e.target.value)}
+                />
+                <label className="dash-label">Description</label>
+                <textarea
+                  rows={5}
+                  placeholder="Click Start verification…"
+                  value={verifyCfg.panel.description}
+                  onChange={(e) => patchEmbed("panel", "description", e.target.value)}
+                />
+                <label className="dash-label">Footer</label>
+                <input
+                  placeholder="{server}"
+                  value={verifyCfg.panel.footer}
+                  onChange={(e) => patchEmbed("panel", "footer", e.target.value)}
+                />
+                <label className="dash-label">Footer icon URL</label>
+                <input
+                  placeholder="https://…"
+                  value={verifyCfg.panel.footerIcon}
+                  onChange={(e) => patchEmbed("panel", "footerIcon", e.target.value)}
+                />
+                <label className="dash-label">Thumbnail URL</label>
+                <input
+                  placeholder="https://…"
+                  value={verifyCfg.panel.thumbnail}
+                  onChange={(e) => patchEmbed("panel", "thumbnail", e.target.value)}
+                />
+                <label className="dash-label">Image / GIF URL</label>
+                <input
+                  placeholder="https://…gif"
+                  value={verifyCfg.panel.image}
+                  onChange={(e) => patchEmbed("panel", "image", e.target.value)}
+                />
+                <label className="dash-label">Color hex</label>
+                <input
+                  placeholder="2B2D31"
+                  value={verifyCfg.panel.color}
+                  onChange={(e) => patchEmbed("panel", "color", e.target.value)}
+                />
+                <label className="dash-label">Button label</label>
+                <input
+                  placeholder="Start verification"
+                  value={verifyCfg.panel.button}
+                  onChange={(e) => patchEmbed("panel", "button", e.target.value)}
+                />
+
+                <h3>Opened ticket</h3>
+                <label className="dash-label">Title</label>
+                <input
+                  placeholder="Verification ticket"
+                  value={verifyCfg.ticket.title}
+                  onChange={(e) => patchEmbed("ticket", "title", e.target.value)}
+                />
+                <label className="dash-label">Description</label>
+                <textarea
+                  rows={4}
+                  placeholder="{mention} finished /profile."
+                  value={verifyCfg.ticket.description}
+                  onChange={(e) => patchEmbed("ticket", "description", e.target.value)}
+                />
+                <label className="dash-label">Footer</label>
+                <input
+                  placeholder="{username}"
+                  value={verifyCfg.ticket.footer}
+                  onChange={(e) => patchEmbed("ticket", "footer", e.target.value)}
+                />
+                <label className="dash-label">Footer icon URL</label>
+                <input
+                  placeholder="https://…"
+                  value={verifyCfg.ticket.footerIcon}
+                  onChange={(e) => patchEmbed("ticket", "footerIcon", e.target.value)}
+                />
+                <label className="dash-label">Thumbnail URL</label>
+                <input
+                  placeholder="https://…"
+                  value={verifyCfg.ticket.thumbnail}
+                  onChange={(e) => patchEmbed("ticket", "thumbnail", e.target.value)}
+                />
+                <label className="dash-label">Image / GIF URL</label>
+                <input
+                  placeholder="https://…gif"
+                  value={verifyCfg.ticket.image}
+                  onChange={(e) => patchEmbed("ticket", "image", e.target.value)}
+                />
+                <label className="dash-label">Color hex</label>
+                <input
+                  placeholder="2B2D31"
+                  value={verifyCfg.ticket.color}
+                  onChange={(e) => patchEmbed("ticket", "color", e.target.value)}
+                />
+
                 <h3>Approve</h3>
                 <PickerField
                   label="Give these roles"
@@ -563,7 +701,7 @@ export default function Dashboard() {
             ) : null
           ) : null}
 
-          {tab === "messages" ? (
+          {tab === "messages" && isStaff && guildId === "network" ? (
             <>
               <h1>Messages</h1>
               <div className="tabs">
@@ -576,14 +714,41 @@ export default function Dashboard() {
               </div>
               <form className="dash-form dash-form-col" onSubmit={sendMessage}>
                 {form.mode === "channel" ? (
-                  <PickerField
-                    label="Channel"
-                    placeholder="Select a channel"
-                    value={channels.find((ch) => ch.id === form.channelId) ? `#${channels.find((ch) => ch.id === form.channelId).name}` : ""}
-                    onClick={() => setPicker("channel")}
-                  />
+                  <>
+                    <label className="dash-label">Server</label>
+                    <select
+                      value={messageGuildId}
+                      onChange={(e) => {
+                        field("channelId", "");
+                        setMessageGuildId(e.target.value);
+                      }}
+                      required
+                    >
+                      <option value="">Select a server</option>
+                      {botGuilds.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
+                    <PickerField
+                      label="Channel"
+                      placeholder="Select a channel"
+                      value={channels.find((ch) => ch.id === form.channelId) ? `#${channels.find((ch) => ch.id === form.channelId).name}` : ""}
+                      onClick={() => setPicker("channel")}
+                    />
+                  </>
                 ) : (
                   <>
+                    <label className="dash-label">Server</label>
+                    <select value={messageGuildId} onChange={(e) => setMessageGuildId(e.target.value)} required>
+                      <option value="">Select a server</option>
+                      {botGuilds.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {g.name}
+                        </option>
+                      ))}
+                    </select>
                     <div className="dash-form">
                       <input
                         placeholder="Search members in that server"

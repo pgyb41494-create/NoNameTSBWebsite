@@ -25,8 +25,8 @@ export default function Home() {
     setParams({}, { replace: true });
   }, [params, setParams]);
 
-  const dashHref = user?.staff ? "/dashboard" : loginUrl;
-  const dashIsLink = Boolean(user?.staff);
+  const dashHref = user ? "/dashboard" : loginUrl;
+  const dashIsLink = Boolean(user);
 
   return (
     <div className="home-page">
@@ -64,7 +64,7 @@ export default function Home() {
         <p className="home-kicker">Dashboard · Setup · Clan</p>
         <h2 className="home-block-title">Server tools live here.</h2>
         <p className="home-block-body">
-          Sign in with Discord to manage blacklists, trainers, verification, and bot messages — without digging through slash menus.
+          Sign in with Discord to open the dashboard, invite the bot, and configure verification for servers you admin.
         </p>
       </section>
 

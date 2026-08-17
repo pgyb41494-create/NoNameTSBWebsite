@@ -15,10 +15,8 @@ export function Navbar() {
             {brand.name}
           </NavLink>
           <nav className="nav-links">
-            <NavLink to="/blacklist">Blacklisted</NavLink>
-            <NavLink to="/trainers">Trainers</NavLink>
+            {user ? <NavLink to="/dashboard">Dashboard</NavLink> : null}
             {user ? <NavLink to="/report">Report</NavLink> : null}
-            {user?.staff ? <NavLink to="/dashboard">Dashboard</NavLink> : null}
           </nav>
         </div>
         <div className="nav-edge nav-actions">
