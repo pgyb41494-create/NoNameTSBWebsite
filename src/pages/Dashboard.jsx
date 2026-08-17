@@ -45,8 +45,8 @@ export default function Dashboard() {
   const [guilds, setGuilds] = useState([]);
   const [guildId, setGuildId] = useState("");
   const [messageGuildId, setMessageGuildId] = useState("");
-  const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
   const [blacklist, setBlacklist] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [reports, setReports] = useState([]);
@@ -122,6 +122,12 @@ export default function Dashboard() {
       })
       .catch((err) => setError(err.message));
   }, [user]);
+
+  useEffect(() => {
+    if (!notice) return undefined;
+    const timer = setTimeout(() => setNotice(""), 3000);
+    return () => clearTimeout(timer);
+  }, [notice]);
 
   useEffect(() => {
     if (!guildId || !user) return;
