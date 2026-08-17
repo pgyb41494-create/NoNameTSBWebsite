@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import { api } from "../api";
-import { useAuth } from "../auth";
+import { PickerField, PickerModal, Switch } from "../components/PickerModal";
 
 const TABS = [
   { id: "reports", label: "Reports" },
@@ -26,6 +26,7 @@ export default function Dashboard() {
   const [verifyCfg, setVerifyCfg] = useState(null);
   const [channels, setChannels] = useState([]);
   const [members, setMembers] = useState([]);
+  const [picker, setPicker] = useState(null);
   const [form, setForm] = useState({
     discordId: "",
     reason: "",
@@ -194,6 +195,23 @@ export default function Dashboard() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function roleItems() {
+    return roles.map((role) => ({
+      id: role.id,
+      name: role.name,
+      color: role.color,
+      tag: role.hoisted ? "HOISTED" : "",
+    }));
+  }
+
+  function roleNames(ids) {
+    const map = new Map(roles.map((role) => [role.id, role.name]));
+    const names = (ids || []).map((id) => map.get(id)).filter(Boolean);
+    if (!names.length) return "";
+    if (names.length <= 2) return names.join(", ");
+    return `${names[0]}, ${names[1]} +${names.length - 2}`;
+  }
+
   async function searchMembers() {
     const serverId = messageGuildId || (guildId !== "network" ? guildId : "");
     if (!serverId) {
@@ -255,6 +273,10 @@ export default function Dashboard() {
     e.preventDefault();
     try {
       const serverId = messageGuildId || (guildId !== "network" ? guildId : "");
+      if (form.mode === "channel" && !form.channelId) {
+        setError("Pick a channel first.");
+        return;
+      }
       const isEmbed = form.format === "embed";
       await api.staff.message({
         type: form.mode,
@@ -460,59 +482,18 @@ export default function Dashboard() {
                 }}
               >
                 <h3>Approve</h3>
-                <label className="dash-label">Give these roles</label>
-                <div className="role-list">
-                  {roles.length === 0 ? <p className="sub">No roles found.</p> : null}
-                  {roles.map((role) => (
-                    <label key={`add-${role.id}`}>
-                      <input
-                        type="checkbox"
-                        checked={verifyCfg.approve.addRoleIds.includes(role.id)}
-                        onChange={() => {
-                          const has = verifyCfg.approve.addRoleIds.includes(role.id);
-                          setVerifyCfg({
-                            ...verifyCfg,
-                            approve: {
-                              ...verifyCfg.approve,
-                              addRoleIds: has
-                                ? verifyCfg.approve.addRoleIds.filter((id) => id !== role.id)
-                                : [...verifyCfg.approve.addRoleIds, role.id],
-                            },
-                          });
-                        }}
-                      />
-                      <span style={role.color && role.color !== "#000000" ? { color: role.color } : undefined}>
-                        {role.name}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-                <label className="dash-label">Remove these roles</label>
-                <div className="role-list">
-                  {roles.map((role) => (
-                    <label key={`rm-${role.id}`}>
-                      <input
-                        type="checkbox"
-                        checked={verifyCfg.approve.removeRoleIds.includes(role.id)}
-                        onChange={() => {
-                          const has = verifyCfg.approve.removeRoleIds.includes(role.id);
-                          setVerifyCfg({
-                            ...verifyCfg,
-                            approve: {
-                              ...verifyCfg.approve,
-                              removeRoleIds: has
-                                ? verifyCfg.approve.removeRoleIds.filter((id) => id !== role.id)
-                                : [...verifyCfg.approve.removeRoleIds, role.id],
-                            },
-                          });
-                        }}
-                      />
-                      <span style={role.color && role.color !== "#000000" ? { color: role.color } : undefined}>
-                        {role.name}
-                      </span>
-                    </label>
-                  ))}
-                </div>
+                <PickerField
+                  label="Give these roles"
+                  placeholder="Select roles"
+                  value={roleNames(verifyCfg.approve.addRoleIds)}
+                  onClick={() => setPicker("give")}
+                />
+                <PickerField
+                  label="Remove these roles"
+                  placeholder="Select roles"
+                  value={roleNames(verifyCfg.approve.removeRoleIds)}
+                  onClick={() => setPicker("remove")}
+                />
                 <label className="dash-label">Nickname (optional)</label>
                 <input
                   placeholder="{display}  ·  {roblox}  ·  {username}"
@@ -530,16 +511,13 @@ export default function Dashboard() {
                     setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, dmMessage: e.target.value } })
                   }
                 />
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={!!verifyCfg.approve.closeTicket}
-                    onChange={(e) =>
-                      setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, closeTicket: e.target.checked } })
-                    }
-                  />{" "}
-                  Close the ticket after approve
-                </label>
+                <Switch
+                  checked={!!verifyCfg.approve.closeTicket}
+                  onChange={(on) =>
+                    setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, closeTicket: on } })
+                  }
+                  label="Close the ticket after approve"
+                />
 
                 <h3>Deny</h3>
                 <div className="tabs">
@@ -577,7 +555,6 @@ export default function Dashboard() {
           {tab === "messages" ? (
             <>
               <h1>Messages</h1>
-              <p className="sub">Pick a server, then a channel — no IDs needed.</p>
               <div className="tabs">
                 <button className={`tab ${form.mode === "channel" ? "on" : ""}`} type="button" onClick={() => field("mode", "channel")}>
                   Server channel
@@ -587,37 +564,13 @@ export default function Dashboard() {
                 </button>
               </div>
               <form className="dash-form dash-form-col" onSubmit={sendMessage}>
-                <label className="dash-label">Server</label>
-                <select
-                  value={messageGuildId}
-                  onChange={(e) => {
-                    setMessageGuildId(e.target.value);
-                    field("channelId", "");
-                    field("userId", "");
-                    setMembers([]);
-                  }}
-                  required={form.mode === "channel"}
-                >
-                  <option value="">Select a server</option>
-                  {guilds.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {g.name}
-                    </option>
-                  ))}
-                </select>
-
                 {form.mode === "channel" ? (
-                  <>
-                    <label className="dash-label">Channel</label>
-                    <select value={form.channelId} onChange={(e) => field("channelId", e.target.value)} required>
-                      <option value="">{channels.length ? "Select a channel" : "No text channels found"}</option>
-                      {channels.map((ch) => (
-                        <option key={ch.id} value={ch.id}>
-                          #{ch.name}
-                        </option>
-                      ))}
-                    </select>
-                  </>
+                  <PickerField
+                    label="Channel"
+                    placeholder="Select a channel"
+                    value={channels.find((ch) => ch.id === form.channelId) ? `#${channels.find((ch) => ch.id === form.channelId).name}` : ""}
+                    onClick={() => setPicker("channel")}
+                  />
                 ) : (
                   <>
                     <div className="dash-form">
@@ -707,6 +660,34 @@ export default function Dashboard() {
           ) : null}
         </div>
       </div>
+      <PickerModal
+        open={picker === "give" || picker === "remove"}
+        title="Role"
+        subtitle="Select roles"
+        searchPlaceholder="Search roles"
+        items={roleItems()}
+        selectedIds={
+          picker === "remove" ? verifyCfg?.approve.removeRoleIds || [] : verifyCfg?.approve.addRoleIds || []
+        }
+        multiple
+        onClose={() => setPicker(null)}
+        onDone={(ids) => {
+          if (!verifyCfg) return;
+          const key = picker === "remove" ? "removeRoleIds" : "addRoleIds";
+          setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, [key]: ids } });
+        }}
+      />
+      <PickerModal
+        open={picker === "channel"}
+        title="Channel"
+        subtitle="Select a channel"
+        searchPlaceholder="Search channels"
+        items={channels.map((ch) => ({ id: ch.id, name: ch.name, prefix: "#" }))}
+        selectedIds={form.channelId ? [form.channelId] : []}
+        multiple={false}
+        onClose={() => setPicker(null)}
+        onDone={(id) => field("channelId", id)}
+      />
     </section>
   );
 }
