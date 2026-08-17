@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 import { api, brand } from "../api";
 import { useAuth } from "../auth";
 import { PickerField, PickerModal, Switch } from "../components/PickerModal";
+import PanelsTab from "./PanelsTab";
 
 const TABS = [
   { id: "reports", label: "Reports" },
@@ -10,6 +11,7 @@ const TABS = [
   { id: "blacklist", label: "Blacklisted" },
   { id: "trainers", label: "Trainers" },
   { id: "verify", label: "Verification" },
+  { id: "panels", label: "Panels" },
   { id: "audit", label: "Audit log" },
   { id: "invites", label: "Invites" },
 ];
@@ -128,7 +130,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
-    if (tab !== "verify") return;
+    if (tab !== "verify" && tab !== "panels") return;
     if (!guildId || guildId === "network") {
       setRoles([]);
       setVerifyCfg(null);
@@ -136,18 +138,17 @@ export default function Dashboard() {
     }
     Promise.all([
       api.staff.roles(guildId).catch(() => ({ roles: [] })),
-      api.staff.verify(guildId).catch(() => null),
-    ])
-      .then(([roleData, cfg]) => {
-        setRoles(roleData.roles || []);
-        setVerifyCfg(mergeVerify(cfg));
-        setError("");
-      });
+      tab === "verify" ? api.staff.verify(guildId).catch(() => null) : Promise.resolve(null),
+    ]).then(([roleData, cfg]) => {
+      setRoles(roleData.roles || []);
+      if (cfg) setVerifyCfg(mergeVerify(cfg));
+      setError("");
+    });
   }, [guildId, tab, user]);
 
   useEffect(() => {
     if (!user) return;
-    if (tab !== "audit" && tab !== "invites") return;
+    if (tab !== "audit" && tab !== "invites" && tab !== "panels") return;
     if (!guildId || guildId === "network") {
       setAuditCfg(null);
       setInviteCfg(null);
@@ -444,7 +445,7 @@ export default function Dashboard() {
           <nav className="dash-tabs">
             {TABS.filter((item) => {
               if (guildId === "network") return isStaff && (item.id === "reports" || item.id === "messages");
-              if (item.id === "verify" || item.id === "audit" || item.id === "invites") return true;
+              if (item.id === "verify" || item.id === "panels" || item.id === "audit" || item.id === "invites") return true;
               return isStaff && (item.id === "blacklist" || item.id === "trainers");
             }).map((item) => (
               <button key={item.id} className={tab === item.id ? "on" : ""} type="button" onClick={() => setTab(item.id)}>
@@ -778,6 +779,17 @@ export default function Dashboard() {
                 </button>
               </form>
             ) : null
+          ) : null}
+
+          {tab === "panels" && hasServer ? (
+            <PanelsTab
+              guildId={guildId}
+              roles={roles}
+              channels={channels}
+              roleNames={roleNames}
+              onError={setError}
+              onNotice={setNotice}
+            />
           ) : null}
 
           {tab === "audit" && hasServer && auditCfg ? (

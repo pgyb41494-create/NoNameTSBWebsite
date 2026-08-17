@@ -69,6 +69,17 @@ export const api = {
     saveAudit: (guildId, body) => apiFetch(`/api/staff/${guildId}/audit`, { method: "PUT", body }),
     invites: (guildId) => apiFetch(`/api/staff/${guildId}/invites`),
     saveInvites: (guildId, body) => apiFetch(`/api/staff/${guildId}/invites`, { method: "PUT", body }),
+    panels: (guildId) => apiFetch(`/api/staff/${guildId}/panels`),
+    createPanel: (guildId, body) => apiFetch(`/api/staff/${guildId}/panels`, { method: "POST", body }),
+    updatePanel: (guildId, key, body) =>
+      apiFetch(`/api/staff/${guildId}/panels/${encodeURIComponent(key)}`, { method: "PUT", body }),
+    deletePanel: (guildId, key) =>
+      apiFetch(`/api/staff/${guildId}/panels/${encodeURIComponent(key)}`, { method: "DELETE" }),
+    sendPanel: (guildId, key, channelId) =>
+      apiFetch(`/api/staff/${guildId}/panels/${encodeURIComponent(key)}/send`, {
+        method: "POST",
+        body: { channelId },
+      }),
     createChannel: (guildId, body) => apiFetch(`/api/staff/${guildId}/channels`, { method: "POST", body }),
     reports: () => apiFetch("/api/staff/reports"),
     approveReport: (id, body = {}) => apiFetch(`/api/staff/reports/${id}/approve`, { method: "POST", body }),
