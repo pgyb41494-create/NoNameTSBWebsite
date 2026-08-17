@@ -293,6 +293,26 @@ button { font-family: inherit; cursor: pointer; }
   gap: 12px;
 }
 
+.role-list {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--card);
+}
+.role-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: 14px;
+  color: var(--text);
+}
+.dash-form-col h3 {
+  margin: 8px 0 0;
+}
+
 .login-gate {
   min-height: 100vh;
   display: grid;

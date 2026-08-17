@@ -7,6 +7,7 @@ const TABS = [
   { id: "reports", label: "Reports" },
   { id: "blacklist", label: "Blacklisted" },
   { id: "trainers", label: "Trainers" },
+  { id: "verify", label: "Verification" },
   { id: "messages", label: "Messages" },
 ];
 
@@ -22,6 +23,8 @@ export default function Dashboard() {
   const [blacklist, setBlacklist] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [reports, setReports] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [verifyCfg, setVerifyCfg] = useState(null);
   const [channels, setChannels] = useState([]);
   const [members, setMembers] = useState([]);
   const [form, setForm] = useState({
@@ -97,6 +100,27 @@ export default function Dashboard() {
     if (!guildId || !user?.staff) return;
     refreshLists(guildId).catch((err) => setError(err.message));
   }, [guildId, user]);
+
+  useEffect(() => {
+    if (!user?.staff) return;
+    if (tab !== "verify") return;
+    if (!guildId || guildId === "network") {
+      setRoles([]);
+      setVerifyCfg(null);
+      return;
+    }
+    Promise.all([api.staff.roles(guildId), api.staff.verify(guildId)])
+      .then(([roleData, cfg]) => {
+        setRoles(roleData.roles || []);
+        setVerifyCfg(cfg);
+        setError("");
+      })
+      .catch((err) => {
+        setRoles([]);
+        setVerifyCfg(null);
+        setError(err.message);
+      });
+  }, [guildId, tab, user]);
 
   useEffect(() => {
     if (!user?.staff) return;
@@ -358,6 +382,152 @@ export default function Dashboard() {
                   </article>
                 ))}
               </div>
+            </>
+          ) : null}
+
+          {tab === "verify" ? (
+            <>
+              <h1>Verification</h1>
+              <p className="sub">
+                Approve can add/remove roles, set a nickname, and DM them. Deny can close the ticket or make it staff-only.
+              </p>
+              {guildId === "network" ? (
+                <p className="sub">Pick a specific server in the sidebar to edit verification actions.</p>
+              ) : !verifyCfg ? (
+                <p className="sub">Loading verification settings…</p>
+              ) : (
+                <form
+                  className="dash-form dash-form-col"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    try {
+                      const saved = await api.staff.saveVerify(guildId, verifyCfg);
+                      setVerifyCfg(saved);
+                      setNotice("Verification actions saved.");
+                      setError("");
+                    } catch (err) {
+                      setError(err.message);
+                    }
+                  }}
+                >
+                  <h3>When Approve is pressed</h3>
+                  <label className="dash-label">Give these roles</label>
+                  <div className="role-list">
+                    {roles.length === 0 ? <p className="sub">No roles found.</p> : null}
+                    {roles.map((role) => (
+                      <label key={`add-${role.id}`}>
+                        <input
+                          type="checkbox"
+                          checked={verifyCfg.approve.addRoleIds.includes(role.id)}
+                          onChange={() => {
+                            const has = verifyCfg.approve.addRoleIds.includes(role.id);
+                            setVerifyCfg({
+                              ...verifyCfg,
+                              approve: {
+                                ...verifyCfg.approve,
+                                addRoleIds: has
+                                  ? verifyCfg.approve.addRoleIds.filter((id) => id !== role.id)
+                                  : [...verifyCfg.approve.addRoleIds, role.id],
+                              },
+                            });
+                          }}
+                        />
+                        <span style={role.color && role.color !== "#000000" ? { color: role.color } : undefined}>
+                          {role.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <label className="dash-label">Remove these roles</label>
+                  <div className="role-list">
+                    {roles.map((role) => (
+                      <label key={`rm-${role.id}`}>
+                        <input
+                          type="checkbox"
+                          checked={verifyCfg.approve.removeRoleIds.includes(role.id)}
+                          onChange={() => {
+                            const has = verifyCfg.approve.removeRoleIds.includes(role.id);
+                            setVerifyCfg({
+                              ...verifyCfg,
+                              approve: {
+                                ...verifyCfg.approve,
+                                removeRoleIds: has
+                                  ? verifyCfg.approve.removeRoleIds.filter((id) => id !== role.id)
+                                  : [...verifyCfg.approve.removeRoleIds, role.id],
+                              },
+                            });
+                          }}
+                        />
+                        <span style={role.color && role.color !== "#000000" ? { color: role.color } : undefined}>
+                          {role.name}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <label className="dash-label">Nickname (optional)</label>
+                  <input
+                    placeholder="{display}  ·  {roblox}  ·  {username}"
+                    value={verifyCfg.approve.nickname}
+                    onChange={(e) =>
+                      setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, nickname: e.target.value } })
+                    }
+                  />
+                  <label className="dash-label">DM after approve (optional)</label>
+                  <textarea
+                    rows={3}
+                    placeholder="You’re verified."
+                    value={verifyCfg.approve.dmMessage}
+                    onChange={(e) =>
+                      setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, dmMessage: e.target.value } })
+                    }
+                  />
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={!!verifyCfg.approve.closeTicket}
+                      onChange={(e) =>
+                        setVerifyCfg({ ...verifyCfg, approve: { ...verifyCfg.approve, closeTicket: e.target.checked } })
+                      }
+                    />{" "}
+                    Close the ticket after approve
+                  </label>
+
+                  <h3>When Deny is pressed</h3>
+                  <div className="tabs">
+                    <button
+                      className={`tab ${verifyCfg.deny.mode === "close" ? "on" : ""}`}
+                      type="button"
+                      onClick={() => setVerifyCfg({ ...verifyCfg, deny: { ...verifyCfg.deny, mode: "close" } })}
+                    >
+                      Close ticket
+                    </button>
+                    <button
+                      className={`tab ${verifyCfg.deny.mode === "private" ? "on" : ""}`}
+                      type="button"
+                      onClick={() => setVerifyCfg({ ...verifyCfg, deny: { ...verifyCfg.deny, mode: "private" } })}
+                    >
+                      Go private
+                    </button>
+                  </div>
+                  <p className="sub">
+                    {verifyCfg.deny.mode === "private"
+                      ? "Private removes the applicant from the ticket so staff can keep talking."
+                      : "Close deletes the ticket after 5 seconds."}
+                  </p>
+                  <label className="dash-label">DM after deny (optional)</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Your verification was denied."
+                    value={verifyCfg.deny.dmMessage}
+                    onChange={(e) =>
+                      setVerifyCfg({ ...verifyCfg, deny: { ...verifyCfg.deny, dmMessage: e.target.value } })
+                    }
+                  />
+                  <button className="btn" type="submit">
+                    Save verification actions
+                  </button>
+                </form>
+              )}
             </>
           ) : null}
 
