@@ -20,10 +20,10 @@ export default function Home() {
     <div>
       <section className="hero">
         <div className="wrap">
-          <div className="kicker">Strongest Battlegrounds · Competitive</div>
+          <h1>{brand.name}</h1>
           <p className="lead">Profiles, boards, lineups, and an AI coach for TSB clans.</p>
           <div className="hero-actions">
-            <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
+            <a className="btn ghost" href={brand.invite} target="_blank" rel="noreferrer">
               Add bot
             </a>
             <Link className="btn ghost" to="/trainers">

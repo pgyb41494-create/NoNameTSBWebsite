@@ -22,18 +22,14 @@ function forceGifIfAnimated(url) {
 
 function avatarCandidates(src, userId) {
   const list = [];
+  if (userId) list.push(`${API}/api/public/avatar/${userId}`);
   const forced = forceGifIfAnimated(src);
   if (forced) list.push(forced);
-  if (userId) list.push(`${API}/api/public/avatar/${userId}`);
   list.push(defaultAvatar(userId));
   return [...new Set(list.filter(Boolean))];
 }
 
-/**
- * Shows Discord PFPs including animated GIFs.
- * Tries CDN (.gif) → API proxy → default embed avatar.
- */
-export function BoardAvatar({ src, userId, alt = "" }) {
+export function BoardAvatar({ src, userId, alt = "", className = "board-avatar" }) {
   const candidates = avatarCandidates(src, userId);
   const [index, setIndex] = useState(0);
 
@@ -45,10 +41,11 @@ export function BoardAvatar({ src, userId, alt = "" }) {
 
   return (
     <img
-      className="board-avatar"
+      className={className}
       src={url}
       alt={alt}
       loading="lazy"
+      referrerPolicy="no-referrer"
       onError={() => setIndex((i) => (i + 1 < candidates.length ? i + 1 : i))}
     />
   );

@@ -1,6 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { brand } from "../api";
 import { useAuth } from "../auth";
+import { BoardAvatar } from "./BoardAvatar";
 
 export function Navbar() {
   const { user, loading, loginUrl, logout } = useAuth();
@@ -8,7 +9,11 @@ export function Navbar() {
   return (
     <header className="nav-bar">
       <div className="nav-inner">
-        <div className="nav-edge nav-edge-left" aria-hidden="true" />
+        <div className="nav-edge nav-edge-left">
+          <NavLink className="nav-brand" to="/" end>
+            {brand.name}
+          </NavLink>
+        </div>
         <nav className="nav-links">
           <NavLink to="/" end>
             Home
@@ -18,7 +23,7 @@ export function Navbar() {
         </nav>
         <div className="nav-edge nav-edge-right nav-actions">
           <a className="btn" href={brand.invite} target="_blank" rel="noreferrer">
-            Add bot
+            Invite
           </a>
           {user ? (
             <NavLink className="btn ghost" to="/report">
@@ -33,13 +38,13 @@ export function Navbar() {
                 </NavLink>
               ) : null}
               <button type="button" className="btn ghost user-chip" onClick={logout}>
-                {user.avatar ? <img src={user.avatar} alt="" /> : null}
+                <BoardAvatar src={user.avatar} userId={user.id} className="nav-avatar" />
                 {user.username}
               </button>
             </>
           ) : (
-            <a className="btn btn-discord" href={loginUrl}>
-              Log in
+            <a className="btn ghost" href={loginUrl}>
+              Login
             </a>
           )}
         </div>

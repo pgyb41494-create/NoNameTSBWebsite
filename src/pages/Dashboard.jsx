@@ -55,7 +55,7 @@ export default function Dashboard() {
     const [bl, tr, rp] = await Promise.all([
       api.staff.blacklist(id),
       api.staff.trainers(id),
-      api.staff.reports().catch(() => ({ reports: [] })),
+      isNetwork ? api.staff.reports().catch(() => ({ reports: [] })) : Promise.resolve({ reports: [] }),
     ]);
     setBlacklist(bl.entries || []);
     setTrainers(tr.trainers || []);
@@ -105,16 +105,19 @@ export default function Dashboard() {
       setVerifyCfg(null);
       return;
     }
-    Promise.all([api.staff.roles(guildId), api.staff.verify(guildId)])
+    Promise.all([
+      api.staff.roles(guildId).catch(() => ({ roles: [] })),
+      api.staff.verify(guildId).catch(() => null),
+    ])
       .then(([roleData, cfg]) => {
         setRoles(roleData.roles || []);
-        setVerifyCfg(cfg);
+        setVerifyCfg(
+          cfg || {
+            approve: { addRoleIds: [], removeRoleIds: [], nickname: "", dmMessage: "", closeTicket: false },
+            deny: { mode: "close", dmMessage: "" },
+          }
+        );
         setError("");
-      })
-      .catch((err) => {
-        setRoles([]);
-        setVerifyCfg(null);
-        setError(err.message);
       });
   }, [guildId, tab, user]);
 
@@ -128,7 +131,7 @@ export default function Dashboard() {
   function enterServer(id) {
     setGuildId(id);
     setMessageGuildId(id === "network" ? "" : id);
-    setTab("reports");
+    setTab(id === "network" ? "reports" : "blacklist");
     setNotice("");
     setError("");
     setVerifyCfg(null);
@@ -298,7 +301,11 @@ export default function Dashboard() {
             </div>
           </div>
           <nav className="dash-tabs">
-            {TABS.map((item) => (
+            {TABS.filter((item) => {
+              if (item.id === "reports") return guildId === "network";
+              if (item.id === "verify" || item.id === "messages") return guildId !== "network";
+              return true;
+            }).map((item) => (
               <button key={item.id} className={tab === item.id ? "on" : ""} type="button" onClick={() => setTab(item.id)}>
                 {item.label}
               </button>
@@ -313,7 +320,7 @@ export default function Dashboard() {
           {error ? <p className="banner banner-danger">{error}</p> : null}
           {notice ? <p className="banner banner-ok">{notice}</p> : null}
 
-          {tab === "reports" ? (
+          {tab === "reports" && guildId === "network" ? (
             <>
               <h1>Pending reports</h1>
               <p className="sub">Approve to push a report onto the public blacklist.</p>
