@@ -116,14 +116,21 @@ export default function Dashboard() {
     setTrainers(tr.trainers || []);
     setReports(rp.reports || []);
     if (isNetwork) {
-      const [feed, players, groups] = await Promise.all([
-        api.staff.activity().catch(() => ({ events: [] })),
-        api.staff.roster().catch(() => ({ players: [] })),
-        api.staff.duplicates().catch(() => ({ groups: [] })),
-      ]);
-      setActivity(feed.events || []);
-      setRoster(players.players || []);
-      setDupes(groups.groups || []);
+      try {
+        const [feed, players, groups] = await Promise.all([
+          api.staff.activity(),
+          api.staff.roster(),
+          api.staff.duplicates(),
+        ]);
+        setActivity(feed.events || []);
+        setRoster(players.players || []);
+        setDupes(groups.groups || []);
+      } catch (err) {
+        setActivity([]);
+        setRoster([]);
+        setDupes([]);
+        setError(err.message || "Failed to load network audit data.");
+      }
     } else {
       setActivity([]);
       setRoster([]);
@@ -171,6 +178,12 @@ export default function Dashboard() {
     if (!guildId || !user) return;
     refreshLists(guildId).catch((err) => setError(err.message));
   }, [guildId, user]);
+
+  useEffect(() => {
+    if (!user?.staff || guildId !== "network") return;
+    if (tab !== "activity" && tab !== "roster" && tab !== "dupes") return;
+    refreshLists("network").catch((err) => setError(err.message));
+  }, [tab]);
 
   useEffect(() => {
     if (!user) return;
