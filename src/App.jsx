@@ -7,6 +7,7 @@ import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Report from "./pages/Report";
 import Trainers from "./pages/Trainers";
+import Blacklist from "./pages/Blacklist";
 
 export default function App() {
   return (
@@ -26,7 +27,7 @@ export default function App() {
                 }
               />
               <Route path="/trainers" element={<Trainers />} />
-              <Route path="/blacklist" element={<Navigate to="/" replace />} />
+              <Route path="/blacklist" element={<Blacklist />} />
               <Route path="/wars" element={<Navigate to="/" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="*" element={<Navigate to="/" replace />} />

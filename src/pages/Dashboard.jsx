@@ -84,7 +84,7 @@ export default function Dashboard() {
     if (!id || !user?.staff) return;
     const isNetwork = id === "network";
     const [bl, tr, rp] = await Promise.all([
-      isNetwork ? Promise.resolve({ entries: [] }) : api.staff.blacklist(id),
+      isNetwork ? api.staff.blacklist("network") : Promise.resolve({ entries: [] }),
       isNetwork ? api.staff.trainers("network") : Promise.resolve({ trainers: [] }),
       isNetwork ? api.staff.reports().catch(() => ({ reports: [] })) : Promise.resolve({ reports: [] }),
     ]);
@@ -227,6 +227,7 @@ export default function Dashboard() {
   const selectedGuild = guilds.find((g) => g.id === guildId) || null;
   const hasServer = Boolean(guildId && guildId !== "network");
   const isStaff = Boolean(user.staff);
+  const isOwner = Boolean(user.owner);
   const botGuilds = guilds.filter((g) => g.botPresent);
 
   if (!guildId) {
@@ -246,7 +247,7 @@ export default function Dashboard() {
                   <span className="server-fallback">All</span>
                   <div>
                     <strong>Network</strong>
-                    <span>Reports, messages, and trainers</span>
+                    <span>Reports, messages, trainers, and blacklist</span>
                   </div>
                 </div>
                 <button className="btn" type="button" onClick={() => enterServer("network")}>
@@ -356,7 +357,7 @@ export default function Dashboard() {
   async function addBlacklist(e) {
     e.preventDefault();
     try {
-      const data = await api.staff.addBlacklist(guildId, {
+      const data = await api.staff.addBlacklist("network", {
         discordId: form.discordId,
         reason: form.reason,
         evidence: form.evidence,
@@ -451,10 +452,10 @@ export default function Dashboard() {
           <nav className="dash-tabs">
             {TABS.filter((item) => {
               if (guildId === "network") {
-                return isStaff && (item.id === "reports" || item.id === "messages" || item.id === "trainers");
+                return isStaff && (item.id === "reports" || item.id === "messages" || item.id === "trainers" || (item.id === "blacklist" && isOwner));
               }
               if (item.id === "verify" || item.id === "panels" || item.id === "audit" || item.id === "invites") return true;
-              return isStaff && item.id === "blacklist";
+              return false;
             }).map((item) => (
               <button key={item.id} className={tab === item.id ? "on" : ""} type="button" onClick={() => setTab(item.id)}>
                 {item.label}
@@ -491,17 +492,21 @@ export default function Dashboard() {
                       <strong>When:</strong> {row.when || "—"} · <strong>Where:</strong> {row.where || "—"}
                     </p>
                     <div className="dash-form" style={{ marginTop: 12 }}>
-                      <button
-                        className="btn"
-                        type="button"
-                        onClick={async () => {
-                          await api.staff.approveReport(row.id, { guildId });
+                      {isOwner ? (
+                        <button
+                          className="btn"
+                          type="button"
+                          onClick={async () => {
+                          await api.staff.approveReport(row.id, { guildId: "network" });
                           setNotice("Report approved and added to blacklist.");
                           await refreshLists();
                         }}
                       >
                         Approve → blacklist
                       </button>
+                      ) : (
+                        <p className="sub">Only the two owners can add someone to the blacklist.</p>
+                      )}
                       <button
                         className="btn ghost"
                         type="button"
@@ -520,9 +525,10 @@ export default function Dashboard() {
             </>
           ) : null}
 
-          {tab === "blacklist" && isStaff && hasServer ? (
+          {tab === "blacklist" && isOwner && guildId === "network" ? (
             <>
               <h1>Blacklisted</h1>
+              <p className="sub">Network list shown on the public Blacklist page. Only the two owners can add or remove people.</p>
               <form className="dash-form dash-form-col" onSubmit={addBlacklist}>
                 <input placeholder="Discord user ID" value={form.discordId} onChange={(e) => field("discordId", e.target.value)} required />
                 <input placeholder="Sanction reason" value={form.reason} onChange={(e) => field("reason", e.target.value)} />
@@ -544,7 +550,7 @@ export default function Dashboard() {
                       className="btn ghost"
                       type="button"
                       onClick={async () => {
-                        const data = await api.staff.removeBlacklist(guildId, row.discordId);
+                        const data = await api.staff.removeBlacklist("network", row.discordId);
                         setBlacklist(data.entries || []);
                       }}
                     >

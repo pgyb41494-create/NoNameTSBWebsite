@@ -39,12 +39,12 @@ export default function Blacklist() {
         <p className="record-count">
           {loading ? "Loading…" : `${rows.length} records found — network blacklist`}
         </p>
-        <div className="board-grid">
+        <div className="trainer-grid">
           {!loading && rows.length === 0 ? <p className="sub">No one listed.</p> : null}
           {rows.map((row) => {
             const staffHandle = row.moderatorUsername || row.moderatorName || row.addedBy || "staff";
             return (
-              <article className="board-card" key={`${row.discordId}-${row.at || row.id || ""}`}>
+              <article className="trainer-card" key={`${row.discordId}-${row.at || row.id || ""}`}>
                 <div className="board-avatars">
                   <div className="board-avatar-col">
                     <span className="board-label">Player</span>

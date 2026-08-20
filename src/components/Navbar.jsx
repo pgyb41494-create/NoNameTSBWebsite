@@ -16,6 +16,7 @@ export function Navbar() {
           </NavLink>
           <nav className="nav-links">
             <NavLink to="/trainers">Trainers</NavLink>
+            <NavLink to="/blacklist">Blacklist</NavLink>
             {user ? <NavLink to="/dashboard">Dashboard</NavLink> : null}
             {user ? <NavLink to="/report">Report</NavLink> : null}
           </nav>
