@@ -84,6 +84,15 @@ export const api = {
       }),
     createChannel: (guildId, body) => apiFetch(`/api/staff/${guildId}/channels`, { method: "POST", body }),
     reports: () => apiFetch("/api/staff/reports"),
+    activity: (params = {}) => {
+      const q = new URLSearchParams();
+      if (params.event) q.set("event", params.event);
+      if (params.guildId) q.set("guildId", params.guildId);
+      const suffix = q.toString() ? `?${q}` : "";
+      return apiFetch(`/api/staff/activity${suffix}`);
+    },
+    duplicates: () => apiFetch("/api/staff/duplicates"),
+    roster: () => apiFetch("/api/staff/roster"),
     approveReport: (id, body = {}) => apiFetch(`/api/staff/reports/${id}/approve`, { method: "POST", body }),
     denyReport: (id) => apiFetch(`/api/staff/reports/${id}/deny`, { method: "POST" }),
     blacklist: (guildId) => apiFetch(`/api/staff/${guildId}/blacklist`),

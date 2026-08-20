@@ -7,6 +7,9 @@ import PanelsTab from "./PanelsTab";
 
 const TABS = [
   { id: "reports", label: "Reports" },
+  { id: "activity", label: "Audit log" },
+  { id: "roster", label: "Players" },
+  { id: "dupes", label: "Dupes" },
   { id: "messages", label: "Messages" },
   { id: "blacklist", label: "Blacklisted" },
   { id: "trainers", label: "Trainers" },
@@ -36,6 +39,13 @@ const EMPTY_VERIFY = {
 const DEFAULT_INVITE_MESSAGE =
   "{userinvited} was invited by {user} and now has {invites} invites.";
 
+function formatWhen(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString();
+}
+
 function mergeVerify(cfg) {
   return {
     ...EMPTY_VERIFY,
@@ -59,6 +69,10 @@ export default function Dashboard() {
   const [blacklist, setBlacklist] = useState([]);
   const [trainers, setTrainers] = useState([]);
   const [reports, setReports] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const [activityFilter, setActivityFilter] = useState("");
+  const [roster, setRoster] = useState([]);
+  const [dupes, setDupes] = useState([]);
   const [roles, setRoles] = useState([]);
   const [verifyCfg, setVerifyCfg] = useState(null);
   const [auditCfg, setAuditCfg] = useState(null);
@@ -101,6 +115,20 @@ export default function Dashboard() {
     setBlacklist(bl.entries || []);
     setTrainers(tr.trainers || []);
     setReports(rp.reports || []);
+    if (isNetwork) {
+      const [feed, players, groups] = await Promise.all([
+        api.staff.activity().catch(() => ({ events: [] })),
+        api.staff.roster().catch(() => ({ players: [] })),
+        api.staff.duplicates().catch(() => ({ groups: [] })),
+      ]);
+      setActivity(feed.events || []);
+      setRoster(players.players || []);
+      setDupes(groups.groups || []);
+    } else {
+      setActivity([]);
+      setRoster([]);
+      setDupes([]);
+    }
     if (!isNetwork && !messageGuildId) {
       setMessageGuildId(id);
     }
@@ -231,6 +259,10 @@ export default function Dashboard() {
     setAuditCfg(null);
     setAlertsCfg(null);
     setInviteCfg(null);
+    setActivity([]);
+    setRoster([]);
+    setDupes([]);
+    setActivityFilter("");
   }
 
   function leaveServer() {
@@ -243,6 +275,10 @@ export default function Dashboard() {
     setAuditCfg(null);
     setAlertsCfg(null);
     setInviteCfg(null);
+    setActivity([]);
+    setRoster([]);
+    setDupes([]);
+    setActivityFilter("");
   }
 
   function guildIcon(guild) {
@@ -259,6 +295,9 @@ export default function Dashboard() {
   const isStaff = Boolean(user.staff);
   const isOwner = Boolean(user.owner);
   const botGuilds = guilds.filter((g) => g.botPresent);
+  const filteredActivity = activityFilter
+    ? activity.filter((row) => row.event === activityFilter)
+    : activity;
 
   if (!guildId) {
     return (
@@ -497,7 +536,15 @@ export default function Dashboard() {
           <nav className="dash-tabs">
             {TABS.filter((item) => {
               if (guildId === "network") {
-                return isStaff && (item.id === "reports" || item.id === "messages" || item.id === "trainers" || (item.id === "blacklist" && isOwner));
+                return isStaff && (
+                  item.id === "reports" ||
+                  item.id === "activity" ||
+                  item.id === "roster" ||
+                  item.id === "dupes" ||
+                  item.id === "messages" ||
+                  item.id === "trainers" ||
+                  (item.id === "blacklist" && isOwner)
+                );
               }
               if (item.id === "verify" || item.id === "panels" || item.id === "audit" || item.id === "alerts" || item.id === "invites") return true;
               return false;
@@ -564,6 +611,92 @@ export default function Dashboard() {
                         Deny
                       </button>
                     </div>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          {tab === "activity" && guildId === "network" && isStaff ? (
+            <>
+              <h1>Network audit log</h1>
+              <p className="sub">
+                Registrations, rank changes, scores, challenges, and duplicate Roblox alerts across every server.
+              </p>
+              <div className="tabs">
+                <button className={`tab ${!activityFilter ? "on" : ""}`} type="button" onClick={() => setActivityFilter("")}>
+                  All
+                </button>
+                {Object.entries(ALERT_EVENT_LABELS).map(([key, label]) => (
+                  <button
+                    key={key}
+                    className={`tab ${activityFilter === key ? "on" : ""}`}
+                    type="button"
+                    onClick={() => setActivityFilter(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="stack">
+                {filteredActivity.length === 0 ? <p className="sub">No events yet. New profile, rank, score, challenge, and dupe alerts will show here.</p> : null}
+                {filteredActivity.map((row) => (
+                  <article className="list-card" key={row.id}>
+                    <h3>
+                      {row.title} · {row.guildName || row.guildId}
+                    </h3>
+                    <p>{row.summary}</p>
+                    <p>{formatWhen(row.at)}</p>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          {tab === "roster" && guildId === "network" && isStaff ? (
+            <>
+              <h1>Registered players</h1>
+              <p className="sub">{roster.length} linked profiles across the network, with current rank when set.</p>
+              <div className="stack">
+                {roster.length === 0 ? <p className="sub">No registered players yet.</p> : null}
+                {roster.map((row) => (
+                  <article className="list-card" key={`${row.guildId}-${row.discordId}`}>
+                    <h3>
+                      {row.robloxUsername || row.displayName || row.discordId}
+                      {row.rank ? ` · ${row.rank}` : ""}
+                    </h3>
+                    <p>
+                      Discord {row.discordId} · {row.guildName || row.guildId || "—"}
+                      {row.profileId ? ` · code ${row.profileId}` : ""}
+                    </p>
+                    <p>
+                      {row.region || "No region"} · {row.country || "No country"} · updated {formatWhen(row.updatedAt || row.verifiedAt)}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </>
+          ) : null}
+
+          {tab === "dupes" && guildId === "network" && isStaff ? (
+            <>
+              <h1>Duplicate Roblox</h1>
+              <p className="sub">Same Roblox account linked to more than one Discord user anywhere on the network.</p>
+              <div className="stack">
+                {dupes.length === 0 ? <p className="sub">No duplicate Roblox links found.</p> : null}
+                {dupes.map((group) => (
+                  <article className="list-card" key={group.robloxId}>
+                    <h3>
+                      @{group.robloxUsername || "unknown"} · {group.accounts?.length || 0} Discord accounts
+                    </h3>
+                    <p>Roblox ID {group.robloxId}</p>
+                    {(group.accounts || []).map((account) => (
+                      <p key={account.discordId}>
+                        {account.displayName || account.discordId} · {account.discordId}
+                        {account.profileId ? ` · ${account.profileId}` : ""}
+                        {account.guildNames?.length ? ` · ${account.guildNames.join(", ")}` : ""}
+                      </p>
+                    ))}
                   </article>
                 ))}
               </div>
