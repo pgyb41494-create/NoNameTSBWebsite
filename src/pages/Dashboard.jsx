@@ -4,12 +4,14 @@ import { api, brand } from "../api";
 import { useAuth } from "../auth";
 import { PickerField, PickerModal, Switch } from "../components/PickerModal";
 import PanelsTab from "./PanelsTab";
+import ChannelChatTab from "./ChannelChatTab";
 
 const TABS = [
   { id: "reports", label: "Reports" },
   { id: "activity", label: "Audit log" },
   { id: "roster", label: "Players" },
   { id: "dupes", label: "Dupes" },
+  { id: "channelchat", label: "Channel chat" },
   { id: "messages", label: "Messages" },
   { id: "blacklist", label: "Blacklisted" },
   { id: "trainers", label: "Trainers" },
@@ -554,6 +556,7 @@ export default function Dashboard() {
                   item.id === "activity" ||
                   item.id === "roster" ||
                   item.id === "dupes" ||
+                  item.id === "channelchat" ||
                   item.id === "messages" ||
                   item.id === "trainers" ||
                   (item.id === "blacklist" && isOwner)
@@ -714,6 +717,10 @@ export default function Dashboard() {
                 ))}
               </div>
             </>
+          ) : null}
+
+          {tab === "channelchat" && guildId === "network" && isStaff ? (
+            <ChannelChatTab guilds={guilds} onError={setError} onNotice={setNotice} />
           ) : null}
 
           {tab === "blacklist" && isOwner && guildId === "network" ? (
@@ -1311,7 +1318,9 @@ export default function Dashboard() {
         title="Channel"
         subtitle="Select a channel"
         searchPlaceholder="Search channels"
-        items={channels.map((ch) => ({ id: ch.id, name: ch.name, prefix: "#" }))}
+        items={channels
+          .filter((ch) => ch.type !== "category")
+          .map((ch) => ({ id: ch.id, name: ch.name, prefix: "#" }))}
         selectedIds={
           picker === "auditChannel"
             ? auditCfg?.channelId

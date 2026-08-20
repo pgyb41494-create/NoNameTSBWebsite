@@ -84,6 +84,17 @@ export const api = {
         body: { channelId },
       }),
     createChannel: (guildId, body) => apiFetch(`/api/staff/${guildId}/channels`, { method: "POST", body }),
+    channelMessages: (guildId, channelId, params = {}) => {
+      const q = new URLSearchParams();
+      if (params.limit) q.set("limit", String(params.limit));
+      if (params.before) q.set("before", String(params.before));
+      const suffix = q.toString() ? `?${q}` : "";
+      return apiFetch(`/api/staff/${guildId}/channels/${channelId}/messages${suffix}`);
+    },
+    sendChannelMessage: (guildId, channelId, body) =>
+      apiFetch(`/api/staff/${guildId}/channels/${channelId}/messages`, { method: "POST", body }),
+    channelTyping: (guildId, channelId) =>
+      apiFetch(`/api/staff/${guildId}/channels/${channelId}/typing`, { method: "POST", body: {} }),
     reports: () => apiFetch("/api/staff/reports"),
     activity: (params = {}) => {
       const q = new URLSearchParams();
