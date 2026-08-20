@@ -13,8 +13,17 @@ const TABS = [
   { id: "verify", label: "Verification" },
   { id: "panels", label: "Panels" },
   { id: "audit", label: "Audit log" },
+  { id: "alerts", label: "Staff alerts" },
   { id: "invites", label: "Invites" },
 ];
+
+const ALERT_EVENT_LABELS = {
+  profile: "Profile registered",
+  phase: "Rank / phase change",
+  score: "Match scored",
+  challenge: "Challenge opened",
+  duplicateRoblox: "Duplicate Roblox",
+};
 
 const EMPTY_VERIFY = {
   pingRoleIds: [],
@@ -53,6 +62,7 @@ export default function Dashboard() {
   const [roles, setRoles] = useState([]);
   const [verifyCfg, setVerifyCfg] = useState(null);
   const [auditCfg, setAuditCfg] = useState(null);
+  const [alertsCfg, setAlertsCfg] = useState(null);
   const [inviteCfg, setInviteCfg] = useState(null);
   const [channels, setChannels] = useState([]);
   const [members, setMembers] = useState([]);
@@ -154,9 +164,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!user) return;
-    if (tab !== "audit" && tab !== "invites" && tab !== "panels") return;
+    if (tab !== "audit" && tab !== "invites" && tab !== "alerts" && tab !== "panels") return;
     if (!guildId || guildId === "network") {
       setAuditCfg(null);
+      setAlertsCfg(null);
       setInviteCfg(null);
       return;
     }
@@ -166,6 +177,23 @@ export default function Dashboard() {
         .audit(guildId)
         .then((cfg) => {
           setAuditCfg(cfg || { channelId: "" });
+          setError("");
+        })
+        .catch((err) => setError(err.message));
+    }
+    if (tab === "alerts") {
+      api.staff
+        .alerts(guildId)
+        .then((cfg) => {
+          const events = {};
+          for (const key of Object.keys(ALERT_EVENT_LABELS)) {
+            events[key] = cfg?.events?.[key] !== false;
+          }
+          setAlertsCfg({
+            channelId: cfg?.channelId || "",
+            fallbackChannelId: cfg?.fallbackChannelId || "",
+            events,
+          });
           setError("");
         })
         .catch((err) => setError(err.message));
@@ -201,6 +229,7 @@ export default function Dashboard() {
     setVerifyCfg(null);
     setRoles([]);
     setAuditCfg(null);
+    setAlertsCfg(null);
     setInviteCfg(null);
   }
 
@@ -212,6 +241,7 @@ export default function Dashboard() {
     setVerifyCfg(null);
     setRoles([]);
     setAuditCfg(null);
+    setAlertsCfg(null);
     setInviteCfg(null);
   }
 
@@ -321,13 +351,28 @@ export default function Dashboard() {
   }
 
   async function createLogChannel(kind) {
-    const name = kind === "audit" ? "audit-logs" : "invite-logs";
+    const name =
+      kind === "audit" ? "audit-logs" : kind === "alerts" ? "staff-alerts" : "invite-logs";
     try {
       const created = await api.staff.createChannel(guildId, { name });
       setChannels((prev) => [...prev, created]);
       if (kind === "audit") {
         const saved = await api.staff.saveAudit(guildId, { channelId: created.id });
         setAuditCfg(saved);
+      } else if (kind === "alerts") {
+        const saved = await api.staff.saveAlerts(guildId, {
+          ...(alertsCfg || {}),
+          channelId: created.id,
+        });
+        const events = {};
+        for (const key of Object.keys(ALERT_EVENT_LABELS)) {
+          events[key] = saved?.events?.[key] !== false;
+        }
+        setAlertsCfg({
+          channelId: saved?.channelId || created.id,
+          fallbackChannelId: saved?.fallbackChannelId || "",
+          events,
+        });
       } else {
         const saved = await api.staff.saveInvites(guildId, { ...(inviteCfg || {}), channelId: created.id });
         setInviteCfg(saved);
@@ -454,7 +499,7 @@ export default function Dashboard() {
               if (guildId === "network") {
                 return isStaff && (item.id === "reports" || item.id === "messages" || item.id === "trainers" || (item.id === "blacklist" && isOwner));
               }
-              if (item.id === "verify" || item.id === "panels" || item.id === "audit" || item.id === "invites") return true;
+              if (item.id === "verify" || item.id === "panels" || item.id === "audit" || item.id === "alerts" || item.id === "invites") return true;
               return false;
             }).map((item) => (
               <button key={item.id} className={tab === item.id ? "on" : ""} type="button" onClick={() => setTab(item.id)}>
@@ -841,6 +886,71 @@ export default function Dashboard() {
             </form>
           ) : null}
 
+          {tab === "alerts" && hasServer && alertsCfg ? (
+            <form
+              className="dash-form dash-form-col"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  const saved = await api.staff.saveAlerts(guildId, alertsCfg);
+                  const events = {};
+                  for (const key of Object.keys(ALERT_EVENT_LABELS)) {
+                    events[key] = saved?.events?.[key] !== false;
+                  }
+                  setAlertsCfg({
+                    channelId: saved?.channelId || "",
+                    fallbackChannelId: saved?.fallbackChannelId || "",
+                    events,
+                  });
+                  setNotice("Staff alerts saved.");
+                  setError("");
+                } catch (err) {
+                  setError(err.message);
+                }
+              }}
+            >
+              <h1>Staff alerts</h1>
+              <p className="sub">
+                TSB events for staff: profiles, ranks, scores, challenges, and duplicate Roblox links.
+                Falls back to the audit channel if none is set.
+              </p>
+              <PickerField
+                label="Channel"
+                placeholder="Select a channel"
+                value={channelLabel(alertsCfg.channelId)}
+                onClick={() => setPicker("alertsChannel")}
+              />
+              {alertsCfg.fallbackChannelId && !alertsCfg.channelId ? (
+                <p className="sub">
+                  Fallback: {channelLabel(alertsCfg.fallbackChannelId) || `#${alertsCfg.fallbackChannelId}`} (audit log)
+                </p>
+              ) : null}
+              <div className="stack">
+                {Object.entries(ALERT_EVENT_LABELS).map(([key, label]) => (
+                  <Switch
+                    key={key}
+                    checked={alertsCfg.events?.[key] !== false}
+                    onChange={(on) =>
+                      setAlertsCfg({
+                        ...alertsCfg,
+                        events: { ...(alertsCfg.events || {}), [key]: on },
+                      })
+                    }
+                    label={label}
+                  />
+                ))}
+              </div>
+              <div className="dash-form">
+                <button className="btn ghost" type="button" onClick={() => createLogChannel("alerts")}>
+                  Create #staff-alerts
+                </button>
+                <button className="btn" type="submit">
+                  Save
+                </button>
+              </div>
+            </form>
+          ) : null}
+
           {tab === "invites" && hasServer && inviteCfg ? (
             <form
               className="dash-form dash-form-col"
@@ -1051,7 +1161,7 @@ export default function Dashboard() {
         }}
       />
       <PickerModal
-        open={picker === "channel" || picker === "auditChannel" || picker === "inviteChannel"}
+        open={picker === "channel" || picker === "auditChannel" || picker === "alertsChannel" || picker === "inviteChannel"}
         title="Channel"
         subtitle="Select a channel"
         searchPlaceholder="Search channels"
@@ -1061,18 +1171,23 @@ export default function Dashboard() {
             ? auditCfg?.channelId
               ? [auditCfg.channelId]
               : []
-            : picker === "inviteChannel"
-              ? inviteCfg?.channelId
-                ? [inviteCfg.channelId]
+            : picker === "alertsChannel"
+              ? alertsCfg?.channelId
+                ? [alertsCfg.channelId]
                 : []
-              : form.channelId
-                ? [form.channelId]
-                : []
+              : picker === "inviteChannel"
+                ? inviteCfg?.channelId
+                  ? [inviteCfg.channelId]
+                  : []
+                : form.channelId
+                  ? [form.channelId]
+                  : []
         }
         multiple={false}
         onClose={() => setPicker(null)}
         onDone={(id) => {
           if (picker === "auditChannel") setAuditCfg((prev) => ({ ...(prev || {}), channelId: id }));
+          else if (picker === "alertsChannel") setAlertsCfg((prev) => ({ ...(prev || {}), channelId: id }));
           else if (picker === "inviteChannel") setInviteCfg((prev) => ({ ...(prev || {}), channelId: id }));
           else field("channelId", id);
         }}
