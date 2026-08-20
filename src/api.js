@@ -95,6 +95,8 @@ export const api = {
       apiFetch(`/api/staff/${guildId}/channels/${channelId}/messages`, { method: "POST", body }),
     channelTyping: (guildId, channelId) =>
       apiFetch(`/api/staff/${guildId}/channels/${channelId}/typing`, { method: "POST", body: {} }),
+    channelTypingStatus: (guildId, channelId) =>
+      apiFetch(`/api/staff/${guildId}/channels/${channelId}/typing`),
     reports: () => apiFetch("/api/staff/reports"),
     activity: (params = {}) => {
       const q = new URLSearchParams();

@@ -97,7 +97,8 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
     image: "",
     thumbnail: "",
   });
-  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionPickerOpen, setMentionPickerOpen] = useState(false);
+  const [typers, setTypers] = useState([]);
   const [serverPickerOpen, setServerPickerOpen] = useState(false);
   const bottomRef = useRef(null);
   const typingAt = useRef(0);
@@ -160,12 +161,26 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
   useEffect(() => {
     if (!channelId) {
       setMessages([]);
+      setTypers([]);
       return undefined;
     }
     stickBottom.current = true;
     loadMessages(channelId);
-    const timer = setInterval(() => loadMessages(channelId, { silent: true }), 4000);
-    return () => clearInterval(timer);
+    const msgTimer = setInterval(() => loadMessages(channelId, { silent: true }), 4000);
+    const typingTimer = setInterval(() => {
+      api.staff
+        .channelTypingStatus(serverId, channelId)
+        .then((data) => setTypers(data.typing || []))
+        .catch(() => {});
+    }, 2000);
+    api.staff
+      .channelTypingStatus(serverId, channelId)
+      .then((data) => setTypers(data.typing || []))
+      .catch(() => {});
+    return () => {
+      clearInterval(msgTimer);
+      clearInterval(typingTimer);
+    };
   }, [channelId, serverId]);
 
   function onScroll(e) {
@@ -181,10 +196,33 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
     api.staff.channelTyping(serverId, channelId).catch(() => {});
   }
 
-  function insertMention(member) {
-    const token = `<@${member.id}>`;
+  async function openMentionPicker() {
+    setMentionPickerOpen(true);
+    if (!serverId) return;
+    try {
+      const data = await api.staff.members(serverId, "");
+      setMembers(data.members || []);
+    } catch {
+      // keep existing members
+    }
+  }
+
+  function insertMentionById(id) {
+    if (!id) return;
+    const member = members.find((m) => m.id === id);
+    const token = `<@${id}>`;
     setContent((prev) => `${prev}${prev && !prev.endsWith(" ") ? " " : ""}${token} `);
-    setMentionQuery("");
+    setMentionPickerOpen(false);
+    if (member) onNotice?.(`Mentioned @${member.username || member.displayName}`);
+  }
+
+  function typingLabel() {
+    if (!typers.length) return "";
+    const names = typers.map((t) => t.displayName || t.username || "Someone");
+    if (names.length === 1) return `${names[0]} is typing…`;
+    if (names.length === 2) return `${names[0]} and ${names[1]} are typing…`;
+    if (names.length === 3) return `${names[0]}, ${names[1]}, and ${names[2]} are typing…`;
+    return `${names[0]}, ${names[1]}, and ${names.length - 2} others are typing…`;
   }
 
   async function send(e) {
@@ -226,18 +264,7 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
     }
   }
 
-  const mentionHits = mentionQuery
-    ? members
-        .filter((m) => {
-          const q = mentionQuery.toLowerCase();
-          return (
-            String(m.displayName || "").toLowerCase().includes(q) ||
-            String(m.username || "").toLowerCase().includes(q) ||
-            String(m.id).includes(q)
-          );
-        })
-        .slice(0, 8)
-    : [];
+  const typingText = typingLabel();
 
   return (
     <div className="chat-shell">
@@ -271,6 +298,24 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
         multiple={false}
         onClose={() => setServerPickerOpen(false)}
         onDone={(id) => setServerId(id || "")}
+      />
+
+      <PickerModal
+        open={mentionPickerOpen}
+        title="Member"
+        subtitle="Select someone to mention"
+        searchPlaceholder="Search members"
+        items={members.map((m) => ({
+          id: m.id,
+          name: m.displayName || m.username,
+          icon: m.avatar || undefined,
+          fallback: String(m.displayName || m.username || "?").trim().charAt(0).toUpperCase() || "?",
+          tag: m.username ? `@${m.username}` : undefined,
+        }))}
+        selectedIds={[]}
+        multiple={false}
+        onClose={() => setMentionPickerOpen(false)}
+        onDone={insertMentionById}
       />
 
       {!serverId ? (
@@ -416,30 +461,30 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
                     </div>
                   ) : null}
 
-                  <div className="chat-mention-bar">
-                    <input
-                      placeholder="Search members to mention"
-                      value={mentionQuery}
-                      onChange={(e) => setMentionQuery(e.target.value)}
-                    />
-                    {mentionHits.length ? (
-                      <div className="chat-mention-list">
-                        {mentionHits.map((m) => (
-                          <button key={m.id} type="button" onClick={() => insertMention(m)}>
-                            <BoardAvatar src={m.avatar} userId={m.id} className="chat-mention-av" />
-                            {m.displayName || m.username}
-                          </button>
+                  <PickerField
+                    label="Mention"
+                    placeholder="Select a member to mention"
+                    value=""
+                    onClick={openMentionPicker}
+                  />
+
+                  {typingText ? (
+                    <div className="chat-typing">
+                      <div className="chat-typing-avatars">
+                        {typers.slice(0, 3).map((t) => (
+                          <BoardAvatar key={t.id} src={t.avatar} userId={t.id} className="chat-typing-av" />
                         ))}
                       </div>
-                    ) : null}
-                  </div>
+                      <span>{typingText}</span>
+                    </div>
+                  ) : null}
 
                   <textarea
                     rows={format === "embed" ? 2 : 4}
                     placeholder={
                       format === "embed"
-                        ? "Optional text above the embed (links & <@id> mentions work)"
-                        : "Message as the bot — paste links, use <@id> mentions…"
+                        ? "Optional text above the embed (links & mentions work)"
+                        : "Message as the bot — paste links, mention people…"
                     }
                     value={content}
                     onChange={(e) => {
