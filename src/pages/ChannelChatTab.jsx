@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import { BoardAvatar } from "../components/BoardAvatar";
 import { PickerField, PickerModal } from "../components/PickerModal";
+import { ChatAttachments, ChatEmbed, DiscordContent } from "../components/DiscordMessage";
 
 function sortPos(a, b) {
   return (a.position ?? 0) - (b.position ?? 0) || String(a.name || "").localeCompare(String(b.name || ""));
@@ -70,39 +71,6 @@ function formatTime(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
-function renderContent(content, mentions = []) {
-  if (!content) return null;
-  const map = new Map(mentions.map((m) => [String(m.id), m.displayName || m.username || m.id]));
-  const parts = String(content).split(/(<@!?\d+>|https?:\/\/[^\s<]+)/g);
-  return parts.map((part, i) => {
-    const mention = part.match(/^<@!?(\d+)>$/);
-    if (mention) {
-      const name = map.get(mention[1]) || mention[1];
-      return (
-        <span className="chat-mention" key={`${i}-${part}`}>
-          @{name}
-        </span>
-      );
-    }
-    if (/^https?:\/\//.test(part)) {
-      return (
-        <a key={`${i}-${part}`} href={part} target="_blank" rel="noreferrer">
-          {part}
-        </a>
-      );
-    }
-    return <span key={`${i}-${part}`}>{part}</span>;
-  });
-}
-
-function hexColor(value) {
-  if (value == null) return null;
-  if (typeof value === "number") return `#${value.toString(16).padStart(6, "0")}`;
-  const raw = String(value).replace(/^#/, "");
-  if (/^[0-9a-fA-F]{6}$/.test(raw)) return `#${raw}`;
-  return null;
 }
 
 export default function ChannelChatTab({ guilds, onError, onNotice }) {
@@ -524,7 +492,12 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
                       <div className="forum-card-top">
                         <BoardAvatar
                           src={post.owner?.avatar || post.starter?.author?.avatar}
-                          userId={post.owner?.id || post.starter?.author?.id}
+                          userId={
+                            post.owner?.webhook || post.starter?.author?.webhook
+                              ? undefined
+                              : post.owner?.id || post.starter?.author?.id
+                          }
+                          preferSrc
                           className="forum-card-av"
                         />
                         <div className="forum-card-meta">
@@ -583,45 +556,64 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
                 <div className="chat-messages" ref={messagesRef} onScroll={onScroll}>
                   {loadingMessages && messages.length === 0 ? <p className="sub">Loading messages…</p> : null}
                   {!loadingMessages && messages.length === 0 ? <p className="sub">No messages yet.</p> : null}
-                  {messages.map((msg) => (
-                    <article className={`chat-msg ${msg.author?.bot ? "bot" : ""}`} key={msg.id}>
-                      <BoardAvatar src={msg.author?.avatar} userId={msg.author?.id} className="chat-avatar" />
-                      <div className="chat-msg-body">
-                        <div className="chat-msg-meta">
-                          <strong>{msg.author?.displayName || msg.author?.username || "Unknown"}</strong>
-                          {msg.author?.bot ? <span className="chat-bot-tag">BOT</span> : null}
+                  {messages.map((msg) => {
+                    const isBot = !!(msg.author?.bot || msg.author?.webhook || msg.webhookId);
+                    if (msg.system) {
+                      return (
+                        <div className="chat-system" key={msg.id}>
+                          {msg.content || "System message"}
                           <span>{formatTime(msg.createdAt)}</span>
                         </div>
-                        {msg.content ? <p className="chat-text">{renderContent(msg.content, msg.mentions)}</p> : null}
-                        {(msg.embeds || []).map((emb, idx) => (
-                          <div
-                            className="chat-embed"
-                            key={`${msg.id}-e-${idx}`}
-                            style={{ borderColor: hexColor(emb.color) || "var(--line-strong)" }}
-                          >
-                            {emb.title ? <h4>{emb.title}</h4> : null}
-                            {emb.description ? <p>{emb.description}</p> : null}
-                            {emb.image?.url ? <img src={emb.image.url} alt="" /> : null}
-                            {emb.thumbnail?.url && !emb.image?.url ? (
-                              <img className="chat-embed-thumb" src={emb.thumbnail.url} alt="" />
-                            ) : null}
-                            {emb.footer?.text ? <small>{emb.footer.text}</small> : null}
+                      );
+                    }
+                    return (
+                      <article className={`chat-msg ${isBot ? "bot" : ""}`} key={msg.id}>
+                        <BoardAvatar
+                          src={msg.author?.avatar}
+                          userId={msg.author?.webhook ? undefined : msg.author?.id}
+                          preferSrc
+                          className="chat-avatar"
+                        />
+                        <div className="chat-msg-body">
+                          {msg.repliedUser || msg.reference ? (
+                            <div className="chat-reply">
+                              Replying to{" "}
+                              <span>@{msg.repliedUser?.displayName || msg.repliedUser?.username || "message"}</span>
+                            </div>
+                          ) : null}
+                          <div className="chat-msg-meta">
+                            <strong className="chat-author-name">
+                              {msg.author?.displayName || msg.author?.username || "Unknown"}
+                            </strong>
+                            {isBot ? <span className="chat-bot-tag">BOT</span> : null}
+                            <span className="chat-msg-time">{formatTime(msg.createdAt)}</span>
+                            {msg.editedAt ? <span className="chat-msg-edited">(edited)</span> : null}
                           </div>
-                        ))}
-                        {(msg.attachments || []).map((file) =>
-                          String(file.contentType || "").startsWith("image/") ? (
-                            <a key={file.id} href={file.url} target="_blank" rel="noreferrer">
-                              <img className="chat-attach" src={file.url} alt={file.name || ""} />
-                            </a>
-                          ) : (
-                            <a key={file.id} className="chat-file" href={file.url} target="_blank" rel="noreferrer">
-                              {file.name || "Attachment"}
-                            </a>
-                          )
-                        )}
-                      </div>
-                    </article>
-                  ))}
+                          {msg.content ? (
+                            <DiscordContent
+                              content={msg.content}
+                              mentions={msg.mentions}
+                              mentionRoles={msg.mentionRoles}
+                              mentionChannels={msg.mentionChannels}
+                            />
+                          ) : null}
+                          {(msg.embeds || []).map((emb, idx) => (
+                            <ChatEmbed emb={emb} key={`${msg.id}-e-${idx}`} />
+                          ))}
+                          <ChatAttachments attachments={msg.attachments} />
+                          {(msg.stickers || []).map((sticker) => (
+                            <img
+                              key={sticker.id}
+                              className="chat-sticker"
+                              src={sticker.url}
+                              alt={sticker.name || "Sticker"}
+                              title={sticker.name || ""}
+                            />
+                          ))}
+                        </div>
+                      </article>
+                    );
+                  })}
                 </div>
 
                 <form className="chat-composer" onSubmit={send}>

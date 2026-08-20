@@ -29,15 +29,25 @@ function avatarCandidates(src, userId) {
   return [...new Set(list.filter(Boolean))];
 }
 
-export function BoardAvatar({ src, userId, alt = "", className = "board-avatar" }) {
-  const [candidates, setCandidates] = useState(() => (src ? avatarCandidates(src, userId) : []));
+export function BoardAvatar({
+  src,
+  userId,
+  alt = "",
+  className = "board-avatar",
+  preferSrc = false,
+}) {
+  const [candidates, setCandidates] = useState(() => avatarCandidates(src, userId));
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     setIndex(0);
-    setCandidates(src ? avatarCandidates(src, userId) : []);
-    if (!userId) return undefined;
+    setCandidates(avatarCandidates(src, userId));
+    // Keep explicit CDN avatars (webhooks / message authors). Looking up the user
+    // id would replace custom webhook PFPs with the bot's default avatar.
+    if (!userId || preferSrc || (src && String(src).includes("cdn.discordapp.com"))) {
+      return undefined;
+    }
     (async () => {
       try {
         const res = await fetch(`${API}/api/public/user/${userId}`);
@@ -56,7 +66,7 @@ export function BoardAvatar({ src, userId, alt = "", className = "board-avatar" 
     return () => {
       cancelled = true;
     };
-  }, [src, userId]);
+  }, [src, userId, preferSrc]);
 
   const url = candidates.length ? candidates[Math.min(index, candidates.length - 1)] : "";
 
