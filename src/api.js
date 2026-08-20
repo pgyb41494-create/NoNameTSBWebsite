@@ -11,6 +11,7 @@ export const brand = {
     import.meta.env.VITE_DISCORD_INVITE ||
     "https://discord.com/oauth2/authorize?client_id=CLIENT_ID&permissions=8&scope=bot%20applications.commands",
   support: import.meta.env.VITE_SUPPORT_INVITE || "",
+  icon: "/icon.jpg",
   gif: "https://developers.oneway.lat/evidencias/asa_3_1.gif",
 };
 

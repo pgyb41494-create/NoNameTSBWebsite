@@ -16,7 +16,7 @@ export function LoginGate({ children }) {
     return (
       <div className="login-gate">
         <div className="login-card">
-          <img src={brand.gif} alt="" />
+          <img src={brand.icon} alt="" />
           <h1>Log in</h1>
           <p className="lead">Discord login is required to continue.</p>
           <a className="btn btn-discord" href={loginUrl}>

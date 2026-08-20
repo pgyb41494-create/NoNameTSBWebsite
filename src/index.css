@@ -771,11 +771,12 @@ h1, h2, h3, .font-display {
 .login-card img {
   width: 72px;
   height: 72px;
-  border-radius: 50%;
+  border-radius: 8px;
   object-fit: cover;
   margin: 0 auto 24px;
   display: block;
   border: 1px solid var(--line);
+  background: #000;
 }
 .login-card h1 {
   margin: 0 0 8px;

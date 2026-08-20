@@ -11,7 +11,7 @@ export function Navbar() {
       <div className="nav-inner">
         <div className="nav-edge nav-edge-left">
           <NavLink className="nav-brand" to="/" end>
-            <img src={brand.gif} alt="" />
+            <img src={brand.icon} alt="" />
             {brand.name}
           </NavLink>
           <nav className="nav-links">

@@ -8,7 +8,7 @@ export function Footer() {
     <footer className="footer">
       <div className="wrap footer-inner">
         <div className="footer-brand">
-          <img src={brand.gif} alt="" />
+          <img src={brand.icon} alt="" />
           <span>
             © {new Date().getFullYear()} {brand.name} · The Strongest Battlegrounds
           </span>
