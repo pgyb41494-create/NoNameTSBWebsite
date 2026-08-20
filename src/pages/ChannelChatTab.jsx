@@ -10,7 +10,9 @@ function sortPos(a, b) {
 function buildChannelTree(channels) {
   const list = Array.isArray(channels) ? channels : [];
   const categories = list.filter((ch) => ch.type === "category").sort(sortPos);
-  const text = list.filter((ch) => ch.type === "text" || ch.type === "announcement");
+  const text = list.filter(
+    (ch) => ch.type === "text" || ch.type === "announcement" || ch.type === "forum" || ch.type === "media"
+  );
   const byParent = new Map();
   for (const ch of text) {
     const key = ch.parentId || "";
@@ -36,6 +38,31 @@ function buildChannelTree(channels) {
     }
   }
   return rows;
+}
+
+function channelGlyph(type) {
+  if (type === "forum" || type === "media") return "◫";
+  if (type === "announcement") return "📢";
+  return "#";
+}
+
+function isForumChannel(ch) {
+  return ch?.type === "forum" || ch?.type === "media";
+}
+
+function relativeTime(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
 }
 
 function formatTime(value) {
@@ -82,6 +109,12 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
   const [serverId, setServerId] = useState("");
   const [channels, setChannels] = useState([]);
   const [channelId, setChannelId] = useState("");
+  const [threadId, setThreadId] = useState("");
+  const [posts, setPosts] = useState([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
+  const [postTitle, setPostTitle] = useState("");
+  const [creatingPost, setCreatingPost] = useState(false);
+  const [showNewPost, setShowNewPost] = useState(false);
   const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
   const [loadingChannels, setLoadingChannels] = useState(false);
@@ -106,6 +139,9 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
 
   const tree = useMemo(() => buildChannelTree(channels), [channels]);
   const activeChannel = channels.find((ch) => ch.id === channelId) || null;
+  const activePost = posts.find((p) => p.id === threadId) || null;
+  const forumMode = isForumChannel(activeChannel);
+  const chatTargetId = forumMode ? threadId : channelId;
   const botGuilds = guilds.filter((g) => g.botPresent);
 
   function scrollMessagesToBottom() {
@@ -133,6 +169,8 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
         setChannels(list);
         setMembers(memberData.members || []);
         setChannelId("");
+        setThreadId("");
+        setPosts([]);
         setMessages([]);
         onError?.("");
       })
@@ -147,7 +185,7 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
     };
   }, [serverId]);
 
-  async function loadMessages(id = channelId, { silent = false } = {}) {
+  async function loadMessages(id = chatTargetId, { silent = false } = {}) {
     if (!serverId || !id) return;
     if (!silent) setLoadingMessages(true);
     try {
@@ -164,30 +202,74 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
     }
   }
 
+  async function loadPosts(id = channelId, { silent = false } = {}) {
+    if (!serverId || !id) return;
+    if (!silent) setLoadingPosts(true);
+    try {
+      const data = await api.staff.forumPosts(serverId, id);
+      setPosts(data.posts || []);
+      onError?.("");
+    } catch (err) {
+      if (!silent) onError?.(err.message);
+    } finally {
+      if (!silent) setLoadingPosts(false);
+    }
+  }
+
+  function selectChannel(id) {
+    const next = channels.find((ch) => ch.id === id) || null;
+    setChannelId(id);
+    setThreadId("");
+    setMessages([]);
+    setPosts([]);
+    setShowNewPost(false);
+    setPostTitle("");
+    setTypers([]);
+    stickBottom.current = true;
+    if (isForumChannel(next)) {
+      loadPosts(id);
+    }
+  }
+
   useEffect(() => {
     if (!channelId) {
       setMessages([]);
       setTypers([]);
+      setPosts([]);
+      setThreadId("");
       return undefined;
     }
+    if (forumMode && !threadId) {
+      setMessages([]);
+      setTypers([]);
+      return undefined;
+    }
+    const target = forumMode ? threadId : channelId;
+    if (!target) return undefined;
     stickBottom.current = true;
-    loadMessages(channelId);
-    const msgTimer = setInterval(() => loadMessages(channelId, { silent: true }), 4000);
+    loadMessages(target);
+    const msgTimer = setInterval(() => loadMessages(target, { silent: true }), 4000);
     const typingTimer = setInterval(() => {
       api.staff
-        .channelTypingStatus(serverId, channelId)
+        .channelTypingStatus(serverId, target)
         .then((data) => setTypers(data.typing || []))
         .catch(() => {});
     }, 2000);
     api.staff
-      .channelTypingStatus(serverId, channelId)
+      .channelTypingStatus(serverId, target)
       .then((data) => setTypers(data.typing || []))
       .catch(() => {});
     return () => {
       clearInterval(msgTimer);
       clearInterval(typingTimer);
     };
-  }, [channelId, serverId]);
+  }, [channelId, threadId, serverId, forumMode]);
+
+  useEffect(() => {
+    if (!forumMode || !channelId || threadId) return undefined;
+    const timer = setInterval(() => loadPosts(channelId, { silent: true }), 12000);
+    return () => clearInterval(timer);
+  }, [forumMode, channelId, threadId, serverId]);
 
   function onScroll(e) {
     const el = e.currentTarget;
@@ -195,11 +277,11 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
   }
 
   async function pulseTyping() {
-    if (!serverId || !channelId) return;
+    if (!serverId || !chatTargetId) return;
     const now = Date.now();
     if (now - typingAt.current < 7000) return;
     typingAt.current = now;
-    api.staff.channelTyping(serverId, channelId).catch(() => {});
+    api.staff.channelTyping(serverId, chatTargetId).catch(() => {});
   }
 
   async function openMentionPicker() {
@@ -231,7 +313,7 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
 
   async function send(e) {
     e.preventDefault();
-    if (!serverId || !channelId || sending) return;
+    if (!serverId || !chatTargetId || sending) return;
     setSending(true);
     try {
       const body =
@@ -248,12 +330,12 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
               },
             }
           : { content };
-      const data = await api.staff.sendChannelMessage(serverId, channelId, body);
+      const data = await api.staff.sendChannelMessage(serverId, chatTargetId, body);
       const sent = data.message || data;
       if (sent?.id) {
         setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
       } else {
-        await loadMessages(channelId, { silent: true });
+        await loadMessages(chatTargetId, { silent: true });
       }
       setContent("");
       setEmbed({ title: "", description: "", color: "2B2D31", footer: "", image: "", thumbnail: "" });
@@ -265,6 +347,36 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
       onError?.(err.message);
     } finally {
       setSending(false);
+    }
+  }
+
+  async function createPost(e) {
+    e.preventDefault();
+    if (!serverId || !channelId || creatingPost) return;
+    if (!postTitle.trim() || !content.trim()) {
+      onError?.("Forum posts need a title and message.");
+      return;
+    }
+    setCreatingPost(true);
+    try {
+      const created = await api.staff.createForumPost(serverId, channelId, {
+        name: postTitle.trim(),
+        content: content.trim(),
+      });
+      setPostTitle("");
+      setContent("");
+      setShowNewPost(false);
+      await loadPosts(channelId);
+      if (created?.id) {
+        setThreadId(created.id);
+        stickBottom.current = true;
+      }
+      onNotice?.("Forum post created.");
+      onError?.("");
+    } catch (err) {
+      onError?.(err.message);
+    } finally {
+      setCreatingPost(false);
     }
   }
 
@@ -339,9 +451,9 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
                   key={row.id}
                   type="button"
                   className={`chat-channel ${channelId === row.id ? "on" : ""}`}
-                  onClick={() => setChannelId(row.id)}
+                  onClick={() => selectChannel(row.id)}
                 >
-                  <span>#</span>
+                  <span>{channelGlyph(row.type)}</span>
                   {row.name}
                 </button>
               )
@@ -351,13 +463,120 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
           <section className="chat-main">
             {!channelId ? (
               <div className="chat-empty">
-                <p className="sub">Select a channel to read and chat as the bot.</p>
+                <p className="sub">Select a channel or forum to continue.</p>
               </div>
+            ) : forumMode && !threadId ? (
+              <>
+                <header className="chat-room-head">
+                  <div>
+                    <strong>
+                      <span className="chat-forum-mark">◫</span> {activeChannel?.name || "forum"}
+                    </strong>
+                    {activeChannel?.topic ? <p className="sub chat-forum-topic">{activeChannel.topic}</p> : null}
+                  </div>
+                  <div className="chat-head-actions">
+                    <button className="btn ghost" type="button" onClick={() => loadPosts(channelId)}>
+                      Refresh
+                    </button>
+                    <button className="btn" type="button" onClick={() => setShowNewPost((v) => !v)}>
+                      {showNewPost ? "Cancel" : "New Post"}
+                    </button>
+                  </div>
+                </header>
+
+                {showNewPost ? (
+                  <form className="forum-new-post" onSubmit={createPost}>
+                    <input
+                      placeholder="Post title"
+                      value={postTitle}
+                      onChange={(e) => setPostTitle(e.target.value)}
+                      required
+                    />
+                    <textarea
+                      rows={4}
+                      placeholder="Write the first message…"
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      required
+                    />
+                    <div className="chat-send-row">
+                      <p className="sub">Creates a forum post as the bot.</p>
+                      <button className="btn" type="submit" disabled={creatingPost}>
+                        {creatingPost ? "Posting…" : "Post"}
+                      </button>
+                    </div>
+                  </form>
+                ) : null}
+
+                <div className="forum-posts">
+                  {loadingPosts && posts.length === 0 ? <p className="sub">Loading posts…</p> : null}
+                  {!loadingPosts && posts.length === 0 ? <p className="sub">No posts yet.</p> : null}
+                  {posts.map((post) => (
+                    <button
+                      key={post.id}
+                      type="button"
+                      className={`forum-card ${post.archived ? "archived" : ""}`}
+                      onClick={() => {
+                        setThreadId(post.id);
+                        stickBottom.current = true;
+                      }}
+                    >
+                      <div className="forum-card-top">
+                        <BoardAvatar
+                          src={post.owner?.avatar || post.starter?.author?.avatar}
+                          userId={post.owner?.id || post.starter?.author?.id}
+                          className="forum-card-av"
+                        />
+                        <div className="forum-card-meta">
+                          <strong>{post.name}</strong>
+                          <span>
+                            {post.owner?.displayName || post.starter?.author?.displayName || "Unknown"}
+                            {" · "}
+                            {relativeTime(post.lastMessageAt || post.createdAt)}
+                            {post.archived ? " · Archived" : ""}
+                          </span>
+                        </div>
+                        <div className="forum-card-stats">
+                          <span>{Math.max(0, Number(post.messageCount || 0))} replies</span>
+                        </div>
+                      </div>
+                      {post.starter?.content ? (
+                        <p className="forum-card-preview">{post.starter.content}</p>
+                      ) : (
+                        <p className="forum-card-preview dim">No preview</p>
+                      )}
+                      {post.tags?.length ? (
+                        <div className="forum-tags">
+                          {post.tags.map((tag) => (
+                            <span key={tag.id} className="forum-tag">
+                              {tag.emoji ? `${tag.emoji} ` : ""}
+                              {tag.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              </>
             ) : (
               <>
                 <header className="chat-room-head">
-                  <strong>#{activeChannel?.name || "channel"}</strong>
-                  <button className="btn ghost" type="button" onClick={() => loadMessages(channelId)}>
+                  <div className="chat-room-title">
+                    {forumMode ? (
+                      <button className="btn ghost chat-back" type="button" onClick={() => setThreadId("")}>
+                        ← Posts
+                      </button>
+                    ) : null}
+                    <strong>
+                      {forumMode ? activePost?.name || "Post" : `#${activeChannel?.name || "channel"}`}
+                    </strong>
+                  </div>
+                  <button
+                    className="btn ghost"
+                    type="button"
+                    onClick={() => loadMessages(chatTargetId)}
+                  >
                     Refresh
                   </button>
                 </header>
@@ -498,7 +717,9 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
                     required={format === "text"}
                   />
                   <div className="chat-send-row">
-                    <p className="sub">Sends as the bot in #{activeChannel?.name || "channel"}.</p>
+                    <p className="sub">
+                      Sends as the bot in {forumMode ? activePost?.name || "this post" : `#${activeChannel?.name || "channel"}`}.
+                    </p>
                     <button className="btn" type="submit" disabled={sending}>
                       {sending ? "Sending…" : "Send"}
                     </button>

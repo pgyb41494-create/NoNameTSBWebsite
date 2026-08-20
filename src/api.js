@@ -97,6 +97,9 @@ export const api = {
       apiFetch(`/api/staff/${guildId}/channels/${channelId}/typing`, { method: "POST", body: {} }),
     channelTypingStatus: (guildId, channelId) =>
       apiFetch(`/api/staff/${guildId}/channels/${channelId}/typing`),
+    forumPosts: (guildId, channelId) => apiFetch(`/api/staff/${guildId}/channels/${channelId}/posts`),
+    createForumPost: (guildId, channelId, body) =>
+      apiFetch(`/api/staff/${guildId}/channels/${channelId}/posts`, { method: "POST", body }),
     reports: () => apiFetch("/api/staff/reports"),
     activity: (params = {}) => {
       const q = new URLSearchParams();

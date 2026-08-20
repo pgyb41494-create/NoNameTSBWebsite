@@ -1308,7 +1308,7 @@ export default function Dashboard() {
         subtitle="Select a channel"
         searchPlaceholder="Search channels"
         items={channels
-          .filter((ch) => ch.type !== "category")
+          .filter((ch) => ch.type !== "category" && ch.type !== "forum" && ch.type !== "media")
           .map((ch) => ({ id: ch.id, name: ch.name, prefix: "#" }))}
         selectedIds={
           picker === "auditChannel"

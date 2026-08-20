@@ -1641,6 +1641,122 @@ h1, h2, h3, .font-display {
   margin-left: -4px;
 }
 .chat-typing-av:first-child { margin-left: 0; }
+
+.chat-head-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chat-room-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.chat-back {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.chat-forum-mark {
+  color: var(--muted);
+  margin-right: 4px;
+}
+.chat-forum-topic {
+  margin: 4px 0 0;
+  max-width: 520px;
+}
+.forum-new-post {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.forum-posts {
+  flex: 1;
+  overflow: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 560px;
+}
+.forum-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 14px;
+  font: inherit;
+  cursor: pointer;
+}
+.forum-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #3a3a40;
+}
+.forum-card.archived { opacity: 0.72; }
+.forum-card-top {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+.forum-card-av {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #111;
+}
+.forum-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.forum-card-meta strong {
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.forum-card-meta span {
+  color: var(--dim);
+  font-size: 12px;
+}
+.forum-card-stats {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.forum-card-preview {
+  margin: 10px 0 0;
+  color: #d4d4d8;
+  font-size: 13px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.forum-card-preview.dim { color: var(--dim); }
+.forum-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.forum-tag {
+  font-size: 11px;
+  color: #e4e4e7;
+  background: rgba(88, 101, 242, 0.18);
+  border: 1px solid rgba(88, 101, 242, 0.35);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
 @media (max-width: 900px) {
   .chat-layout { grid-template-columns: 1fr; }
   .chat-channels {
