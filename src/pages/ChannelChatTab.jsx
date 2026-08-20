@@ -100,13 +100,19 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
   const [mentionPickerOpen, setMentionPickerOpen] = useState(false);
   const [typers, setTypers] = useState([]);
   const [serverPickerOpen, setServerPickerOpen] = useState(false);
-  const bottomRef = useRef(null);
+  const messagesRef = useRef(null);
   const typingAt = useRef(0);
   const stickBottom = useRef(true);
 
   const tree = useMemo(() => buildChannelTree(channels), [channels]);
   const activeChannel = channels.find((ch) => ch.id === channelId) || null;
   const botGuilds = guilds.filter((g) => g.botPresent);
+
+  function scrollMessagesToBottom() {
+    const el = messagesRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }
 
   useEffect(() => {
     if (!serverId) {
@@ -149,7 +155,7 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
       setMessages(data.messages || []);
       onError?.("");
       if (stickBottom.current) {
-        requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ behavior: silent ? "auto" : "smooth" }));
+        requestAnimationFrame(scrollMessagesToBottom);
       }
     } catch (err) {
       if (!silent) onError?.(err.message);
@@ -209,11 +215,9 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
 
   function insertMentionById(id) {
     if (!id) return;
-    const member = members.find((m) => m.id === id);
     const token = `<@${id}>`;
     setContent((prev) => `${prev}${prev && !prev.endsWith(" ") ? " " : ""}${token} `);
     setMentionPickerOpen(false);
-    if (member) onNotice?.(`Mentioned @${member.username || member.displayName}`);
   }
 
   function typingLabel() {
@@ -256,7 +260,7 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
       onNotice?.("Sent as the bot.");
       onError?.("");
       stickBottom.current = true;
-      requestAnimationFrame(() => bottomRef.current?.scrollIntoView({ behavior: "smooth" }));
+      requestAnimationFrame(scrollMessagesToBottom);
     } catch (err) {
       onError?.(err.message);
     } finally {
@@ -357,7 +361,7 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
                     Refresh
                   </button>
                 </header>
-                <div className="chat-messages" onScroll={onScroll}>
+                <div className="chat-messages" ref={messagesRef} onScroll={onScroll}>
                   {loadingMessages && messages.length === 0 ? <p className="sub">Loading messages…</p> : null}
                   {!loadingMessages && messages.length === 0 ? <p className="sub">No messages yet.</p> : null}
                   {messages.map((msg) => (
@@ -399,7 +403,6 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
                       </div>
                     </article>
                   ))}
-                  <div ref={bottomRef} />
                 </div>
 
                 <form className="chat-composer" onSubmit={send}>
