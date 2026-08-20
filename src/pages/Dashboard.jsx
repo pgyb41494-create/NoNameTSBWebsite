@@ -315,6 +315,22 @@ export default function Dashboard() {
     : activity;
 
   if (!guildId) {
+    const pickable = [
+      ...(isStaff
+        ? [{ id: "network", name: "Network", fallback: "All", tag: "STAFF" }]
+        : []),
+      ...guilds
+        .filter((g) => g.botPresent)
+        .map((g) => ({
+          id: g.id,
+          name: g.name,
+          icon: g.icon || undefined,
+          fallback: String(g.name || "?").trim().charAt(0).toUpperCase() || "?",
+          tag: g.memberCount ? `${g.memberCount}` : undefined,
+        })),
+    ];
+    const needsInvite = guilds.filter((g) => !g.botPresent);
+
     return (
       <section className="page-hero page-hero-blue">
         <div className="wrap server-picker">
@@ -324,48 +340,46 @@ export default function Dashboard() {
           {!guilds.length && !isStaff ? (
             <p className="sub">No servers yet. Log out and log in again so Discord can share the servers you admin.</p>
           ) : null}
-          <div className="server-list">
-            {isStaff ? (
-              <div className="server-row">
-                <div className="server-row-meta">
-                  <span className="server-fallback">All</span>
-                  <div>
-                    <strong>Network</strong>
-                    <span>Reports, messages, trainers, and blacklist</span>
+          <div className="dash-form-col" style={{ maxWidth: 420, marginTop: 18 }}>
+            <PickerField
+              label="Server"
+              placeholder="Select a server"
+              value={""}
+              onClick={() => setPicker("enterServer")}
+            />
+          </div>
+          {needsInvite.length ? (
+            <div className="server-list" style={{ marginTop: 28 }}>
+              <p className="sub">Bot not in these yet</p>
+              {needsInvite.map((g) => (
+                <div key={g.id} className="server-row">
+                  <div className="server-row-meta">
+                    {guildIcon(g)}
+                    <div>
+                      <strong>{g.name}</strong>
+                      <span>Invite the bot to configure this server</span>
+                    </div>
                   </div>
-                </div>
-                <button className="btn" type="button" onClick={() => enterServer("network")}>
-                  Settings
-                </button>
-              </div>
-            ) : null}
-            {guilds.map((g) => (
-              <div key={g.id} className="server-row">
-                <div className="server-row-meta">
-                  {guildIcon(g)}
-                  <div>
-                    <strong>{g.name}</strong>
-                    <span>
-                      {g.botPresent
-                        ? g.memberCount
-                          ? `${g.memberCount} members`
-                          : "Bot is in this server"
-                        : "Bot is not in this server"}
-                    </span>
-                  </div>
-                </div>
-                {g.botPresent ? (
-                  <button className="btn" type="button" onClick={() => enterServer(g.id)}>
-                    Settings
-                  </button>
-                ) : (
                   <a className="btn ghost" href={g.inviteUrl || brand.invite} target="_blank" rel="noreferrer">
                     Invite Bot
                   </a>
-                )}
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <PickerModal
+            open={picker === "enterServer"}
+            title="Server"
+            subtitle="Select a server"
+            searchPlaceholder="Search servers"
+            items={pickable}
+            selectedIds={[]}
+            multiple={false}
+            onClose={() => setPicker(null)}
+            onDone={(id) => {
+              if (id) enterServer(id);
+            }}
+          />
         </div>
       </section>
     );
@@ -1167,22 +1181,12 @@ export default function Dashboard() {
               <form className="dash-form dash-form-col" onSubmit={sendMessage}>
                 {form.mode === "channel" ? (
                   <>
-                    <label className="dash-label">Server</label>
-                    <select
-                      value={messageGuildId}
-                      onChange={(e) => {
-                        field("channelId", "");
-                        setMessageGuildId(e.target.value);
-                      }}
-                      required
-                    >
-                      <option value="">Select a server</option>
-                      {botGuilds.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
+                    <PickerField
+                      label="Server"
+                      placeholder="Select a server"
+                      value={botGuilds.find((g) => g.id === messageGuildId)?.name || ""}
+                      onClick={() => setPicker("messageServer")}
+                    />
                     <PickerField
                       label="Channel"
                       placeholder="Select a channel"
@@ -1192,15 +1196,12 @@ export default function Dashboard() {
                   </>
                 ) : (
                   <>
-                    <label className="dash-label">Server</label>
-                    <select value={messageGuildId} onChange={(e) => setMessageGuildId(e.target.value)} required>
-                      <option value="">Select a server</option>
-                      {botGuilds.map((g) => (
-                        <option key={g.id} value={g.id}>
-                          {g.name}
-                        </option>
-                      ))}
-                    </select>
+                    <PickerField
+                      label="Server"
+                      placeholder="Select a server"
+                      value={botGuilds.find((g) => g.id === messageGuildId)?.name || ""}
+                      onClick={() => setPicker("messageServer")}
+                    />
                     <div className="dash-form">
                       <input
                         placeholder="Search members in that server"
@@ -1211,14 +1212,16 @@ export default function Dashboard() {
                         Search
                       </button>
                     </div>
-                    <select value={form.userId} onChange={(e) => field("userId", e.target.value)} required>
-                      <option value="">Select a user</option>
-                      {members.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.displayName} (@{m.username})
-                        </option>
-                      ))}
-                    </select>
+                    <PickerField
+                      label="User"
+                      placeholder="Select a user"
+                      value={
+                        members.find((m) => m.id === form.userId)
+                          ? `${members.find((m) => m.id === form.userId).displayName} (@${members.find((m) => m.id === form.userId).username})`
+                          : ""
+                      }
+                      onClick={() => setPicker("messageUser")}
+                    />
                   </>
                 )}
                 <div className="tabs">
@@ -1346,6 +1349,43 @@ export default function Dashboard() {
           else if (picker === "inviteChannel") setInviteCfg((prev) => ({ ...(prev || {}), channelId: id }));
           else field("channelId", id);
         }}
+      />
+      <PickerModal
+        open={picker === "messageServer"}
+        title="Server"
+        subtitle="Select a server"
+        searchPlaceholder="Search servers"
+        items={botGuilds.map((g) => ({
+          id: g.id,
+          name: g.name,
+          icon: g.icon || undefined,
+          fallback: String(g.name || "?").trim().charAt(0).toUpperCase() || "?",
+        }))}
+        selectedIds={messageGuildId ? [messageGuildId] : []}
+        multiple={false}
+        onClose={() => setPicker(null)}
+        onDone={(id) => {
+          field("channelId", "");
+          field("userId", "");
+          setMessageGuildId(id || "");
+        }}
+      />
+      <PickerModal
+        open={picker === "messageUser"}
+        title="User"
+        subtitle="Select a member"
+        searchPlaceholder="Search members"
+        items={members.map((m) => ({
+          id: m.id,
+          name: m.displayName || m.username,
+          icon: m.avatar || undefined,
+          fallback: String(m.displayName || m.username || "?").trim().charAt(0).toUpperCase() || "?",
+          tag: m.username ? `@${m.username}` : undefined,
+        }))}
+        selectedIds={form.userId ? [form.userId] : []}
+        multiple={false}
+        onClose={() => setPicker(null)}
+        onDone={(id) => field("userId", id || "")}
       />
     </section>
   );

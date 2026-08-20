@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 function matchesQuery(item, query) {
   const q = String(query || "").trim().toLowerCase();
   if (!q) return true;
-  return String(item.name || "").toLowerCase().includes(q);
+  const hay = `${item.name || ""} ${item.tag || ""} ${item.id || ""}`.toLowerCase();
+  return hay.includes(q);
 }
 
 export function PickerField({ label, value, placeholder = "Select", onClick }) {
@@ -81,14 +82,22 @@ export function PickerModal({
           {shown.length === 0 ? <p className="picker-empty">Nothing found.</p> : null}
           {shown.map((item) => {
             const on = draft.includes(item.id);
-            const color = item.color && item.color !== "#000000" ? item.color : "#9a9a9a";
             return (
-              <button key={item.id} type="button" className={`picker-row ${on ? "on" : ""}`} onClick={() => toggle(item.id)}>
-                <span
-                  className={`picker-dot ${on ? "selected" : ""}`}
-                  style={{ background: on ? "#fff" : color, opacity: on ? 1 : 0.45 }}
-                />
-                <span className="picker-name">{item.prefix || ""}{item.name}</span>
+              <button
+                key={item.id}
+                type="button"
+                className={`picker-row ${on ? "on" : ""}`}
+                onClick={() => toggle(item.id)}
+              >
+                <span className={`picker-radio ${on ? "selected" : ""}`} aria-hidden="true" />
+                {item.icon ? <img className="picker-avatar" src={item.icon} alt="" /> : null}
+                {!item.icon && item.fallback ? (
+                  <span className="picker-avatar picker-avatar-fallback">{item.fallback}</span>
+                ) : null}
+                <span className="picker-name">
+                  {item.prefix || ""}
+                  {item.name}
+                </span>
                 {item.tag ? <span className="picker-tag">{item.tag}</span> : null}
               </button>
             );
@@ -100,7 +109,7 @@ export function PickerModal({
           </span>
           <button
             type="button"
-            className="btn"
+            className="picker-done"
             onClick={() => {
               onDone(multiple ? draft : draft[0] || "");
               onClose();

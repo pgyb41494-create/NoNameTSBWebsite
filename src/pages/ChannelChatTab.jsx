@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api";
 import { BoardAvatar } from "../components/BoardAvatar";
+import { PickerField, PickerModal } from "../components/PickerModal";
 
 function sortPos(a, b) {
   return (a.position ?? 0) - (b.position ?? 0) || String(a.name || "").localeCompare(String(b.name || ""));
@@ -97,6 +98,7 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
     thumbnail: "",
   });
   const [mentionQuery, setMentionQuery] = useState("");
+  const [serverPickerOpen, setServerPickerOpen] = useState(false);
   const bottomRef = useRef(null);
   const typingAt = useRef(0);
   const stickBottom = useRef(true);
@@ -244,21 +246,32 @@ export default function ChannelChatTab({ guilds, onError, onNotice }) {
           <h1>Channel chat</h1>
           <p className="sub">Pick a server, open a channel, and send as the bot — text, links, mentions, embeds.</p>
         </div>
-        <label className="dash-label chat-server-pick">
-          Server
-          <select
-            value={serverId}
-            onChange={(e) => setServerId(e.target.value)}
-          >
-            <option value="">Select a server</option>
-            {botGuilds.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="chat-server-pick">
+          <PickerField
+            label="Server"
+            placeholder="Select a server"
+            value={botGuilds.find((g) => g.id === serverId)?.name || ""}
+            onClick={() => setServerPickerOpen(true)}
+          />
+        </div>
       </div>
+
+      <PickerModal
+        open={serverPickerOpen}
+        title="Server"
+        subtitle="Select a server"
+        searchPlaceholder="Search servers"
+        items={botGuilds.map((g) => ({
+          id: g.id,
+          name: g.name,
+          icon: g.icon || undefined,
+          fallback: String(g.name || "?").trim().charAt(0).toUpperCase() || "?",
+        }))}
+        selectedIds={serverId ? [serverId] : []}
+        multiple={false}
+        onClose={() => setServerPickerOpen(false)}
+        onDone={(id) => setServerId(id || "")}
+      />
 
       {!serverId ? (
         <p className="sub">Choose a server to load its channels.</p>
